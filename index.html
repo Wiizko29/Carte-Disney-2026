@@ -266,14 +266,14 @@
 
         let isUpdating = false;
 
-        // Sauvegarde locale et cloud sécurisée avec fusion des collections
+        // Sauvegarde locale et cloud sécurisée avec fusion intelligente
         function saveAndPushCloud() {
             if (isUpdating) return;
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(db));
 
             fetch(STORAGE_URL, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Type-Content': 'application/json', 'Content-Type': 'application/json' },
                 body: JSON.stringify({ colleagues: db.colleagues })
             }).catch(err => console.error("Erreur sync cloud:", err));
         }
@@ -290,7 +290,6 @@
                         if (!existing) {
                             db.colleagues.push(remoteCol);
                         } else {
-                            // On fusionne : on garde les cartes du cloud s'il y en a, sinon on garde les locales
                             const remoteKeys = Object.keys(remoteCol.collection);
                             const localKeys = Object.keys(existing.collection);
                             if (remoteKeys.length >= localKeys.length) {
@@ -624,14 +623,26 @@
 
         function renderMatrixTable() {
             const table = document.getElementById('matrix-table');
+            const searchVal = document.getElementById('exchange-search').value.toLowerCase().trim();
+
             let html = `<thead><tr class="bg-slate-100 dark:bg-slate-950 text-[11px] font-bold text-slate-500 uppercase"><th class="p-3.5">Carte (Doublons)</th>`;
             db.colleagues.forEach(c => { html += `<th class="p-3.5 text-center">${c.avatar} ${c.name}</th>`; });
             html += `</tr></thead><tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">`;
+
+            let foundAny = false;
 
             getAllKeys().forEach(key => {
                 const hasDup = db.colleagues.some(c => (c.collection[key] || 0) > 1);
                 if (!hasDup) return;
                 const card = db.cards[key];
+
+                if (searchVal) {
+                    const matchKey = key.toLowerCase().includes(searchVal);
+                    const matchName = card.name.toLowerCase().includes(searchVal);
+                    if (!matchKey && !matchName) return;
+                }
+
+                foundAny = true;
                 html += `<tr><td class="p-3.5 font-bold">${card.name}</td>`;
                 db.colleagues.forEach(c => {
                     let qty = c.collection[key] || 0;
@@ -639,6 +650,11 @@
                 });
                 html += `</tr>`;
             });
+
+            if (!foundAny) {
+                html += `<tr><td colspan="${db.colleagues.length + 1}" class="p-6 text-center text-slate-400">Aucun doublon trouvé pour cette recherche.</td></tr>`;
+            }
+
             table.innerHTML = html + `</tbody>`;
         }
 
