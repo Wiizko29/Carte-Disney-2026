@@ -288,8 +288,6 @@
 
         function saveAndPushCloud() {
             if (isUpdating) return;
-            localStorage.setItem("collabcards_net_v14", JSON.stringify(db));
-
             fetch(STORAGE_URL, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -312,7 +310,7 @@
                 document.getElementById('theme-icon').className = "fa-solid fa-sun text-xs";
             }
 
-            // Charger d'abord depuis le cloud pour récupérer les données de tout le monde
+            // Récupérer les données cloud
             try {
                 const response = await fetch(STORAGE_URL);
                 const remoteData = await response.json();
@@ -326,40 +324,31 @@
                         }
                     });
                 }
-            } catch(e) {
-                const local = localStorage.getItem("collabcards_net_v14");
-                if (local) {
-                    try {
-                        const parsed = JSON.parse(local);
-                        if (parsed.colleagues) db.colleagues = parsed.colleagues;
-                    } catch(e) {}
-                }
-            }
+            } catch(e) {}
 
-            // Vérifier si un pseudo est mémorisé dans le navigateur
-            const activeName = localStorage.getItem('collabcards_active_username');
+            // Vérifier l'URL (paramètre ?user=...) ou le stockage persistant
+            const urlParams = new URLSearchParams(window.location.search);
+            let activeName = urlParams.get('user') || localStorage.getItem('collabcards_active_username');
+
             if (activeName) {
                 let found = db.colleagues.find(c => c.name.toLowerCase() === activeName.toLowerCase());
-                if (found) {
-                    db.currentUserName = found.name;
-                    document.getElementById('welcome-modal').classList.add('hidden');
-                    refreshCurrentView();
-                } else {
-                    // Si le profil existe pas en distant mais stocké, on le recrée
+                if (!found) {
                     const newId = 'col_' + Date.now();
                     const isBasile = activeName.toLowerCase() === "basile";
-                    const newProfile = { 
+                    found = { 
                         id: newId, 
                         name: isBasile ? "Basile" : activeName, 
                         avatar: isBasile ? "👑" : "😎", 
                         collection: {}, 
                         createdBy: isBasile ? "admin" : "user" 
                     };
-                    db.colleagues.push(newProfile);
-                    db.currentUserName = newProfile.name;
-                    document.getElementById('welcome-modal').classList.add('hidden');
-                    refreshCurrentView();
+                    db.colleagues.push(found);
+                    saveAndPushCloud();
                 }
+                db.currentUserName = found.name;
+                localStorage.setItem('collabcards_active_username', db.currentUserName);
+                document.getElementById('welcome-modal').classList.add('hidden');
+                refreshCurrentView();
             } else {
                 document.getElementById('welcome-modal').classList.remove('hidden');
             }
@@ -391,6 +380,11 @@
 
             localStorage.setItem('collabcards_active_username', db.currentUserName);
             saveAndPushCloud();
+
+            // Mettre à jour l'URL proprement sans recharger pour verrouiller la session
+            const newUrl = window.location.pathname + '?user=' + encodeURIComponent(db.currentUserName);
+            window.history.replaceState({}, '', newUrl);
+
             document.getElementById('welcome-modal').classList.add('hidden');
             switchTab('mycollection');
             showToast(`Connecté en tant que ${db.currentUserName} !`);
@@ -398,6 +392,8 @@
 
         function disconnectProfile() {
             localStorage.removeItem('collabcards_active_username');
+            // Nettoyer l'URL
+            window.history.replaceState({}, '', window.location.pathname);
             db.currentUserName = null;
             document.getElementById('welcome-name-input').value = '';
             document.getElementById('welcome-modal').classList.remove('hidden');
