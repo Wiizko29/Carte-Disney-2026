@@ -67,7 +67,7 @@
             </div>
             <div>
                 <h3 class="text-xl font-extrabold">Bienvenue sur CardCollab !</h3>
-                <p class="text-xs text-slate-500 mt-1">Entre ton pseudo pour te connecter ou créer ton profil (ex: Pierre, Pierre 2...) :</p>
+                <p class="text-xs text-slate-500 mt-1">Entre ton pseudo pour te connecter (ex: Basile, Pierre...) :</p>
             </div>
             <div class="space-y-3">
                 <input type="text" id="welcome-name-input" placeholder="Ton pseudo..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none text-center">
@@ -249,7 +249,7 @@
         const STORAGE_URL = "https://json.extendsclass.com/bin/3424681640c4";
 
         let db = {
-            currentUserId: null,
+            currentUserName: null,
             colleagues: [
                 { id: "col_basile", name: "Basile", avatar: "👑", collection: {}, createdBy: "admin" }
             ],
@@ -273,7 +273,7 @@
                 if (remoteData && remoteData.colleagues && remoteData.colleagues.length > 0) {
                     isUpdating = true;
                     remoteData.colleagues.forEach(remoteCol => {
-                        let existing = db.colleagues.find(c => c.id === remoteCol.id);
+                        let existing = db.colleagues.find(c => c.name.toLowerCase() === remoteCol.name.toLowerCase());
                         if (!existing) {
                             db.colleagues.push(remoteCol);
                         } else {
@@ -288,7 +288,7 @@
 
         function saveAndPushCloud() {
             if (isUpdating) return;
-            localStorage.setItem("collabcards_net_v13", JSON.stringify(db));
+            localStorage.setItem("collabcards_net_v14", JSON.stringify(db));
 
             fetch(STORAGE_URL, {
                 method: 'PUT',
@@ -297,21 +297,13 @@
             }).catch(err => console.error("Erreur sync cloud:", err));
         }
 
-        function validateUserAndRefresh() {
-            let basile = db.colleagues.find(c => c.name.toLowerCase().trim() === "basile");
-            if (!basile) {
-                db.colleagues.unshift({ id: "col_basile", name: "Basile", avatar: "👑", collection: {}, createdBy: "admin" });
+        function getCurrentUser() {
+            if (!db.currentUserName) return db.colleagues[0];
+            let user = db.colleagues.find(c => c.name.toLowerCase() === db.currentUserName.toLowerCase());
+            if (!user) {
+                user = db.colleagues[0];
             }
-
-            const activeId = localStorage.getItem('collabcards_active_user');
-            if (activeId && db.colleagues.some(c => c.id === activeId)) {
-                db.currentUserId = activeId;
-                document.getElementById('welcome-modal').classList.add('hidden');
-                refreshCurrentView(); // Garde l'onglet actif ou rafraîchit sans forcer le retour au classeur
-            } else {
-                db.currentUserId = null;
-                document.getElementById('welcome-modal').classList.remove('hidden');
-            }
+            return user;
         }
 
         async function loadInitialState() {
@@ -320,14 +312,22 @@
                 document.getElementById('theme-icon').className = "fa-solid fa-sun text-xs";
             }
 
+            // Charger d'abord depuis le cloud pour récupérer les données de tout le monde
             try {
                 const response = await fetch(STORAGE_URL);
                 const remoteData = await response.json();
                 if (remoteData && remoteData.colleagues && remoteData.colleagues.length > 0) {
-                    db.colleagues = remoteData.colleagues;
+                    remoteData.colleagues.forEach(remoteCol => {
+                        let existing = db.colleagues.find(c => c.name.toLowerCase() === remoteCol.name.toLowerCase());
+                        if (!existing) {
+                            db.colleagues.push(remoteCol);
+                        } else {
+                            existing.collection = remoteCol.collection;
+                        }
+                    });
                 }
             } catch(e) {
-                const local = localStorage.getItem("collabcards_net_v13");
+                const local = localStorage.getItem("collabcards_net_v14");
                 if (local) {
                     try {
                         const parsed = JSON.parse(local);
@@ -335,8 +335,35 @@
                     } catch(e) {}
                 }
             }
-            
-            validateUserAndRefresh();
+
+            // Vérifier si un pseudo est mémorisé dans le navigateur
+            const activeName = localStorage.getItem('collabcards_active_username');
+            if (activeName) {
+                let found = db.colleagues.find(c => c.name.toLowerCase() === activeName.toLowerCase());
+                if (found) {
+                    db.currentUserName = found.name;
+                    document.getElementById('welcome-modal').classList.add('hidden');
+                    refreshCurrentView();
+                } else {
+                    // Si le profil existe pas en distant mais stocké, on le recrée
+                    const newId = 'col_' + Date.now();
+                    const isBasile = activeName.toLowerCase() === "basile";
+                    const newProfile = { 
+                        id: newId, 
+                        name: isBasile ? "Basile" : activeName, 
+                        avatar: isBasile ? "👑" : "😎", 
+                        collection: {}, 
+                        createdBy: isBasile ? "admin" : "user" 
+                    };
+                    db.colleagues.push(newProfile);
+                    db.currentUserName = newProfile.name;
+                    document.getElementById('welcome-modal').classList.add('hidden');
+                    refreshCurrentView();
+                }
+            } else {
+                document.getElementById('welcome-modal').classList.remove('hidden');
+            }
+
             setInterval(syncWithCloud, 3000);
         }
 
@@ -348,7 +375,7 @@
             let existingUser = db.colleagues.find(c => c.name.toLowerCase() === name.toLowerCase());
             
             if (existingUser) {
-                db.currentUserId = existingUser.id;
+                db.currentUserName = existingUser.name;
             } else {
                 const newId = 'col_' + Date.now();
                 const newProfile = { 
@@ -359,20 +386,19 @@
                     createdBy: isBasile ? "admin" : "user" 
                 };
                 db.colleagues.push(newProfile);
-                db.currentUserId = newId;
+                db.currentUserName = newProfile.name;
             }
 
-            localStorage.setItem('collabcards_active_user', db.currentUserId);
+            localStorage.setItem('collabcards_active_username', db.currentUserName);
             saveAndPushCloud();
             document.getElementById('welcome-modal').classList.add('hidden');
-            
-            switchTab('mycollection'); // Redirection vers le classeur uniquement lors de la toute première connexion par pseudo
-            showToast(`Connecté en tant que ${name} !`);
+            switchTab('mycollection');
+            showToast(`Connecté en tant que ${db.currentUserName} !`);
         }
 
         function disconnectProfile() {
-            localStorage.removeItem('collabcards_active_user');
-            db.currentUserId = null;
+            localStorage.removeItem('collabcards_active_username');
+            db.currentUserName = null;
             document.getElementById('welcome-name-input').value = '';
             document.getElementById('welcome-modal').classList.remove('hidden');
             showToast("Déconnecté avec succès.");
@@ -382,10 +408,6 @@
             const isDark = document.documentElement.classList.toggle('dark');
             localStorage.setItem('collabcards_dark', isDark);
             document.getElementById('theme-icon').className = isDark ? "fa-solid fa-sun text-xs" : "fa-solid fa-moon text-xs";
-        }
-
-        function getCurrentUser() {
-            return db.colleagues.find(c => c.id === db.currentUserId) || db.colleagues[0];
         }
 
         function isAdmin() {
@@ -492,16 +514,16 @@
             selector.innerHTML = '';
             
             db.colleagues.forEach(c => {
-                selector.innerHTML += `<option value="${c.id}">${c.name} ${c.id === db.currentUserId ? '(Moi)' : ''}</option>`;
+                selector.innerHTML += `<option value="${c.id}">${c.name} ${c.id === getCurrentUser().id ? '(Moi)' : ''}</option>`;
             });
 
-            selector.value = db.currentUserId;
+            selector.value = getCurrentUser().id;
             renderColleaguesCollectionTab();
         }
 
         function renderColleaguesCollectionTab() {
             const selector = document.getElementById('colleague-selector');
-            const targetId = selector.value || db.currentUserId;
+            const targetId = selector.value || getCurrentUser().id;
             const targetCol = db.colleagues.find(c => c.id === targetId) || getCurrentUser();
             document.getElementById('colleague-banner-title').innerText = `Classeur de ${targetCol.name}`;
             
@@ -528,7 +550,7 @@
             const targetCol = db.colleagues.find(c => c.id === colId);
             if (!targetCol) return;
 
-            if (!isAdmin() && colId !== db.currentUserId) {
+            if (!isAdmin() && colId !== getCurrentUser().id) {
                 showToast("Tu ne peux modifier que ton propre classeur !");
                 return;
             }
