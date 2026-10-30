@@ -288,7 +288,7 @@
 
         function saveAndPushCloud() {
             if (isUpdating) return;
-            localStorage.setItem("collabcards_net_v11", JSON.stringify(db));
+            localStorage.setItem("collabcards_net_v12", JSON.stringify(db));
 
             fetch(STORAGE_URL, {
                 method: 'PUT',
@@ -307,7 +307,7 @@
             if (activeId && db.colleagues.some(c => c.id === activeId)) {
                 db.currentUserId = activeId;
                 document.getElementById('welcome-modal').classList.add('hidden');
-                switchTab('mycollection'); // Force l'affichage sur Mon Classeur au chargement initial
+                switchTab('mycollection');
             } else {
                 db.currentUserId = null;
                 document.getElementById('welcome-modal').classList.remove('hidden');
@@ -327,7 +327,7 @@
                     db.colleagues = remoteData.colleagues;
                 }
             } catch(e) {
-                const local = localStorage.getItem("collabcards_net_v11");
+                const local = localStorage.getItem("collabcards_net_v12");
                 if (local) {
                     try {
                         const parsed = JSON.parse(local);
@@ -365,8 +365,6 @@
             localStorage.setItem('collabcards_active_user', db.currentUserId);
             saveAndPushCloud();
             document.getElementById('welcome-modal').classList.add('hidden');
-            
-            // Redirection systématique vers l'onglet Mon Classeur à chaque connexion
             switchTab('mycollection');
             showToast(`Connecté en tant que ${name} !`);
         }
