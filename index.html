@@ -205,10 +205,18 @@
                     <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight" id="colleague-banner-title">Classeur de l'Équipe</h2>
                 </div>
                 <div class="flex items-center gap-4 flex-wrap">
-                    <div class="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10">
-                        <label class="block text-[10px] text-emerald-200 uppercase font-bold tracking-wider mb-1">Sélectionner un collègue :</label>
-                        <select id="colleague-selector" onchange="renderColleaguesCollectionTab()" class="py-2 px-3 bg-slate-900 text-white border border-slate-700 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                        </select>
+                    <div class="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10 flex items-center gap-3">
+                        <div>
+                            <label class="block text-[10px] text-emerald-200 uppercase font-bold tracking-wider mb-1">Sélectionner un collègue :</label>
+                            <select id="colleague-selector" onchange="renderColleaguesCollectionTab()" class="py-2 px-3 bg-slate-900 text-white border border-slate-700 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            </select>
+                        </div>
+                        <!-- Bouton de suppression visible uniquement pour l'admin -->
+                        <div id="admin-delete-container" class="hidden self-end">
+                            <button onclick="deleteSelectedColleague()" class="py-2 px-3 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl transition shadow-md" title="Supprimer ce profil">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -247,7 +255,7 @@
 
     <script>
         const STORAGE_URL = "https://json.extendsclass.com/bin/3424681640c4";
-        const LOCAL_STORAGE_KEY = "collabcards_secure_db_v16";
+        const LOCAL_STORAGE_KEY = "collabcards_secure_db_v17";
 
         let db = {
             currentUserName: null,
@@ -266,7 +274,6 @@
 
         let isUpdating = false;
 
-        // Sauvegarde locale et cloud sécurisée avec fusion intelligente
         function saveAndPushCloud() {
             if (isUpdating) return;
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(db));
@@ -285,10 +292,12 @@
                 const remoteData = await response.json();
                 if (remoteData && remoteData.colleagues && remoteData.colleagues.length > 0) {
                     isUpdating = true;
+                    // Fusion sécurisée : on garde l'intégralité des profils locaux et distants
+                    let mergedColleagues = [...db.colleagues];
                     remoteData.colleagues.forEach(remoteCol => {
-                        let existing = db.colleagues.find(c => c.name.toLowerCase() === remoteCol.name.toLowerCase());
+                        let existing = mergedColleagues.find(c => c.name.toLowerCase() === remoteCol.name.toLowerCase());
                         if (!existing) {
-                            db.colleagues.push(remoteCol);
+                            mergedColleagues.push(remoteCol);
                         } else {
                             const remoteKeys = Object.keys(remoteCol.collection);
                             const localKeys = Object.keys(existing.collection);
@@ -297,6 +306,7 @@
                             }
                         }
                     });
+                    db.colleagues = mergedColleagues;
                     isUpdating = false;
                     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(db));
                     refreshCurrentView();
@@ -319,7 +329,6 @@
                 document.getElementById('theme-icon').className = "fa-solid fa-sun text-xs";
             }
 
-            // 1. Charger en priorité absolue depuis le stockage local du navigateur
             const local = localStorage.getItem(LOCAL_STORAGE_KEY);
             if (local) {
                 try {
@@ -330,7 +339,6 @@
                 } catch(e) {}
             }
 
-            // 2. Récupérer ensuite le cloud et fusionner proprement
             try {
                 const response = await fetch(STORAGE_URL);
                 const remoteData = await response.json();
@@ -350,13 +358,11 @@
                 }
             } catch(e) {}
 
-            // S'assurer que Basile est toujours présent
             let basile = db.colleagues.find(c => c.name.toLowerCase().trim() === "basile");
             if (!basile) {
                 db.colleagues.unshift({ id: "col_basile", name: "Basile", avatar: "👑", collection: {}, createdBy: "admin" });
             }
 
-            // Vérification de la session active (URL ou localStorage)
             const urlParams = new URLSearchParams(window.location.search);
             let activeName = urlParams.get('user') || localStorage.getItem('collabcards_active_username');
 
@@ -373,6 +379,7 @@
                         createdBy: isBasile ? "admin" : "user" 
                     };
                     db.colleagues.push(found);
+                    saveAndPushCloud();
                 }
                 db.currentUserName = found.name;
                 localStorage.setItem('collabcards_active_username', db.currentUserName);
@@ -476,6 +483,13 @@
                 adminBanner.classList.add('hidden');
             }
 
+            const deleteContainer = document.getElementById('admin-delete-container');
+            if (isAdmin()) {
+                deleteContainer.classList.remove('hidden');
+            } else {
+                deleteContainer.classList.add('hidden');
+            }
+
             const activeSec = document.querySelector('main > section:not(.hidden)');
             if (!activeSec) return;
             if (activeSec.id === 'tab-mycollection') renderMyCollection();
@@ -541,7 +555,9 @@
                 selector.innerHTML += `<option value="${c.id}">${c.name} ${c.id === getCurrentUser().id ? '(Moi)' : ''}</option>`;
             });
 
-            selector.value = getCurrentUser().id;
+            if(!selector.value && db.colleagues.length > 0) {
+                selector.value = getCurrentUser().id;
+            }
             renderColleaguesCollectionTab();
         }
 
@@ -568,6 +584,28 @@
                 </div>`;
             });
             document.getElementById('colleague-cards-grid').innerHTML = html;
+        }
+
+        // Fonction réservée à l'admin pour supprimer un profil
+        function deleteSelectedColleague() {
+            if (!isAdmin()) return;
+            const selector = document.getElementById('colleague-selector');
+            const targetId = selector.value;
+            const targetCol = db.colleagues.find(c => c.id === targetId);
+
+            if (!targetCol) return;
+
+            if (targetCol.name.toLowerCase() === "basile") {
+                alert("Impossible de supprimer le compte administrateur principal !");
+                return;
+            }
+
+            if (confirm(`Es-tu sûr de vouloir supprimer le profil de ${targetCol.name} ? Cette action est irréversible.`)) {
+                db.colleagues = db.colleagues.filter(c => c.id !== targetId);
+                saveAndPushCloud();
+                initColleaguesCollectionTab();
+                showToast(`Profil de ${targetCol.name} supprimé.`);
+            }
         }
 
         function openQtyModal(colId, key) {
