@@ -295,11 +295,12 @@
             cards: {}
         };
 
+        // Chargement des images directement à la racine (sans dossier /images)
         for (let i = 1; i <= 12; i++) {
-            db.cards[`P${i}`] = { name: `Carte Premium #${i}`, image: `images/P${i}.png`, isPremium: true };
+            db.cards[`P${i}`] = { name: `Carte Premium #${i}`, image: `P${i}.png`, isPremium: true };
         }
         for (let i = 1; i <= 108; i++) {
-            db.cards[i.toString()] = { name: `Carte #${i}`, image: `images/${i}.png`, isPremium: false };
+            db.cards[i.toString()] = { name: `Carte #${i}`, image: `${i}.png`, isPremium: false };
         }
 
         let isUpdating = false;
@@ -311,7 +312,6 @@
                 const remoteData = await response.json();
                 if (remoteData && remoteData.colleagues && remoteData.colleagues.length > 0) {
                     isUpdating = true;
-                    // On fusionne proprement les profils distants sans écraser les modifications locales en cours
                     remoteData.colleagues.forEach(remoteCol => {
                         let existing = db.colleagues.find(c => c.id === remoteCol.id);
                         if (!existing) {
@@ -325,7 +325,7 @@
 
         function saveAndPushCloud() {
             if (isUpdating) return;
-            localStorage.setItem("collabcards_net_v7", JSON.stringify(db));
+            localStorage.setItem("collabcards_net_v8", JSON.stringify(db));
 
             fetch(STORAGE_URL, {
                 method: 'PUT',
@@ -364,7 +364,7 @@
                     db.colleagues = remoteData.colleagues;
                 }
             } catch(e) {
-                const local = localStorage.getItem("collabcards_net_v7");
+                const local = localStorage.getItem("collabcards_net_v8");
                 if (local) {
                     try {
                         const parsed = JSON.parse(local);
@@ -639,14 +639,13 @@
             const list = document.getElementById('profile-list');
             let html = '';
 
-            // Affiche tous les profils disponibles pour permettre de switcher facilement
             if (!db.colleagues || db.colleagues.length === 0) {
                 list.innerHTML = `<div class="p-4 text-center text-slate-400 text-xs">Aucun profil trouvé.</div>`;
             } else {
                 db.colleagues.forEach(c => {
                     const isCurrent = c.id === db.currentUserId;
                     html += `<div onclick="switchProfile('${c.id}')" class="p-3 rounded-2xl border cursor-pointer flex justify-between items-center ${isCurrent ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-700 dark:text-emerald-300' : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-slate-400'}">
-                        <div class="flex items-center space-x-3">
+                        <div class="files flex items-center space-x-3">
                             <span class="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-base shadow-sm">${c.avatar}</span>
                             <div>
                                 <h4 class="font-bold text-xs">${c.name}</h4>
