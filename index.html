@@ -247,6 +247,7 @@
 
     <script>
         const STORAGE_URL = "https://json.extendsclass.com/bin/3424681640c4";
+        const LOCAL_STORAGE_KEY = "collabcards_secure_db_v16";
 
         let db = {
             currentUserName: null,
@@ -265,6 +266,18 @@
 
         let isUpdating = false;
 
+        // Sauvegarde locale et cloud sécurisée avec fusion des collections
+        function saveAndPushCloud() {
+            if (isUpdating) return;
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(db));
+
+            fetch(STORAGE_URL, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ colleagues: db.colleagues })
+            }).catch(err => console.error("Erreur sync cloud:", err));
+        }
+
         async function syncWithCloud() {
             if (isUpdating) return;
             try {
@@ -277,28 +290,19 @@
                         if (!existing) {
                             db.colleagues.push(remoteCol);
                         } else {
-                            // On fusionne intelligemment : on garde les cartes si le cloud en a, ou on garde les locales si le cloud est vide
-                            if (Object.keys(remoteCol.collection).length > 0 || Object.keys(existing.collection).length === 0) {
+                            // On fusionne : on garde les cartes du cloud s'il y en a, sinon on garde les locales
+                            const remoteKeys = Object.keys(remoteCol.collection);
+                            const localKeys = Object.keys(existing.collection);
+                            if (remoteKeys.length >= localKeys.length) {
                                 existing.collection = remoteCol.collection;
                             }
                         }
                     });
                     isUpdating = false;
+                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(db));
                     refreshCurrentView();
                 }
             } catch(e) {}
-        }
-
-        function saveAndPushCloud() {
-            if (isUpdating) return;
-            // Sauvegarde locale de secours renforcée
-            localStorage.setItem("collabcards_net_v15", JSON.stringify(db));
-
-            fetch(STORAGE_URL, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ colleagues: db.colleagues })
-            }).catch(err => console.error("Erreur sync cloud:", err));
         }
 
         function getCurrentUser() {
@@ -316,8 +320,8 @@
                 document.getElementById('theme-icon').className = "fa-solid fa-sun text-xs";
             }
 
-            // 1. Charger le cache local en premier pour ne jamais perdre les données instantanément
-            const local = localStorage.getItem("collabcards_net_v15");
+            // 1. Charger en priorité absolue depuis le stockage local du navigateur
+            const local = localStorage.getItem(LOCAL_STORAGE_KEY);
             if (local) {
                 try {
                     const parsed = JSON.parse(local);
@@ -327,7 +331,7 @@
                 } catch(e) {}
             }
 
-            // 2. Synchroniser avec le cloud ensuite sans écraser les données locales existantes
+            // 2. Récupérer ensuite le cloud et fusionner proprement
             try {
                 const response = await fetch(STORAGE_URL);
                 const remoteData = await response.json();
@@ -337,7 +341,9 @@
                         if (!existing) {
                             db.colleagues.push(remoteCol);
                         } else {
-                            if (Object.keys(remoteCol.collection).length > 0) {
+                            const remoteKeys = Object.keys(remoteCol.collection);
+                            const localKeys = Object.keys(existing.collection);
+                            if (remoteKeys.length >= localKeys.length) {
                                 existing.collection = remoteCol.collection;
                             }
                         }
@@ -345,6 +351,13 @@
                 }
             } catch(e) {}
 
+            // S'assurer que Basile est toujours présent
+            let basile = db.colleagues.find(c => c.name.toLowerCase().trim() === "basile");
+            if (!basile) {
+                db.colleagues.unshift({ id: "col_basile", name: "Basile", avatar: "👑", collection: {}, createdBy: "admin" });
+            }
+
+            // Vérification de la session active (URL ou localStorage)
             const urlParams = new URLSearchParams(window.location.search);
             let activeName = urlParams.get('user') || localStorage.getItem('collabcards_active_username');
 
@@ -361,7 +374,6 @@
                         createdBy: isBasile ? "admin" : "user" 
                     };
                     db.colleagues.push(found);
-                    saveAndPushCloud();
                 }
                 db.currentUserName = found.name;
                 localStorage.setItem('collabcards_active_username', db.currentUserName);
@@ -371,6 +383,7 @@
                 document.getElementById('welcome-modal').classList.remove('hidden');
             }
 
+            saveAndPushCloud();
             setInterval(syncWithCloud, 3000);
         }
 
