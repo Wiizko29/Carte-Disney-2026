@@ -288,7 +288,7 @@
 
         function saveAndPushCloud() {
             if (isUpdating) return;
-            localStorage.setItem("collabcards_net_v9", JSON.stringify(db));
+            localStorage.setItem("collabcards_net_v10", JSON.stringify(db));
 
             fetch(STORAGE_URL, {
                 method: 'PUT',
@@ -327,7 +327,7 @@
                     db.colleagues = remoteData.colleagues;
                 }
             } catch(e) {
-                const local = localStorage.getItem("collabcards_net_v9");
+                const local = localStorage.getItem("collabcards_net_v10");
                 if (local) {
                     try {
                         const parsed = JSON.parse(local);
@@ -527,7 +527,6 @@
             const targetCol = db.colleagues.find(c => c.id === colId);
             if (!targetCol) return;
 
-            // Seul l'admin ou le propriétaire du compte connecté peut modifier
             if (!isAdmin() && colId !== db.currentUserId) {
                 showToast("Tu ne peux modifier que ton propre classeur !");
                 return;
