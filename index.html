@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CardCollab - Gestionnaire de Collection Live</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.3); border-radius: 9999px; }
+        
+        .card-premium-badge {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%);
+            box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+            border: 1px solid #fde68a;
+        }
+        .card-owned-glow {
+            border: 2px solid #22c55e !important;
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+            background: rgba(34, 197, 94, 0.03);
+            opacity: 1 !important;
+        }
+        .card-premium-owned-glow {
+            border: 2px solid #f59e0b !important;
+            box-shadow: 0 0 18px rgba(245, 158, 11, 0.4);
+            background: linear-gradient(135deg, rgba(254, 243, 199, 0.1) 0%, rgba(245, 158, 11, 0.15) 100%);
+            opacity: 1 !important;
+        }
+        .card-missing {
+            opacity: 0.35;
+            filter: grayscale(80%);
+            border: 1px dashed rgba(156, 163, 175, 0.4);
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col transition-colors duration-300">
+
+    <!-- MODAL BIENVENUE -->
+    <div id="welcome-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6 text-center">
+            <div class="w-16 h-16 rounded-3xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-2xl mx-auto shadow-inner">
+                <i class="fa-solid fa-id-card"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-extrabold">Bienvenue sur CardCollab !</h3>
+                <p class="text-xs text-slate-500 mt-1">Entre ton prénom ou pseudo :</p>
+            </div>
+            <div class="space-y-3">
+                <input type="text" id="welcome-name-input" placeholder="Ton prénom (ex: Basile)..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none text-center">
+                <button onclick="registerFirstUser()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-emerald-600/30 transition">C'est parti ! 🚀</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <header class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30 text-lg font-extrabold">
+                    <i class="fa-solid fa-id-card"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-base tracking-tight bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">CollabCards Live</h1>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Connecté : <span class="font-bold text-emerald-600 dark:text-emerald-400" id="header-user-name">-</span></p>
+                </div>
+            </div>
+
+            <nav class="hidden md:flex space-x-1 bg-slate-100 dark:bg-slate-950 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <button onclick="switchTab('mycollection')" id="nav-mycollection" class="px-4 py-2 rounded-xl text-xs font-bold transition-all bg-emerald-600 text-white shadow-md shadow-emerald-600/20">
+                    <i class="fa-solid fa-book-open mr-1.5"></i> Mon Classeur
+                </button>
+                <button onclick="switchTab('exchanges')" id="nav-exchanges" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white">
+                    <i class="fa-solid fa-handshake mr-1.5"></i> Échanges & Doublons
+                </button>
+                <button onclick="switchTab('colleagues')" id="nav-colleagues" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white">
+                    <i class="fa-solid fa-users mr-1.5"></i> Équipe
+                </button>
+            </nav>
+
+            <div class="flex items-center space-x-2">
+                <button id="admin-add-colleague-btn" onclick="openColleagueModal()" class="hidden px-3.5 py-2 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 border border-amber-200 dark:border-amber-800 rounded-xl text-xs font-bold transition-all items-center space-x-2 text-amber-700 dark:text-amber-300">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span class="hidden sm:inline">Créer un profil</span>
+                </button>
+                <button onclick="openProfileSelector()" class="px-3.5 py-2 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 text-emerald-700 dark:text-emerald-300">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <span class="hidden sm:inline">Changer de profil</span>
+                </button>
+                <button onclick="disconnectProfile()" class="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 flex items-center justify-center text-red-600 dark:text-red-400 hover:scale-105 transition-transform" title="Déconnexion">
+                    <i class="fa-solid fa-right-from-bracket text-xs"></i>
+                </button>
+                <button onclick="toggleDarkMode()" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:scale-105 transition-transform" title="Thème">
+                    <i id="theme-icon" class="fa-solid fa-moon text-xs"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="md:hidden flex border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <button onclick="switchTab('mycollection')" id="mob-mycollection" class="flex-1 py-3 text-center text-xs font-bold text-emerald-600 dark:text-emerald-400 border-b-2 border-emerald-600">
+                <i class="fa-solid fa-book-open block text-sm mb-1"></i> Mon Classeur
+            </button>
+            <button onclick="switchTab('exchanges')" id="mob-exchanges" class="flex-1 py-3 text-center text-xs font-bold text-slate-500 dark:text-slate-400">
+                <i class="fa-solid fa-handshake block text-sm mb-1"></i> Échanges
+            </button>
+            <button onclick="switchTab('colleagues')" id="mob-colleagues" class="flex-1 py-3 text-center text-xs font-bold text-slate-500 dark:text-slate-400">
+                <i class="fa-solid fa-users block text-sm mb-1"></i> Équipe
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- TAB 1 -->
+        <section id="tab-mycollection" class="space-y-6">
+            <div class="bg-gradient-to-r from-emerald-900 via-slate-900 to-teal-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-emerald-500/20 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div>
+                    <div id="admin-banner-pill" class="hidden inline-flex items-center space-x-1.5 bg-amber-500/20 text-amber-300 text-xs font-bold px-3 py-1 rounded-full mb-3 border border-amber-500/30">
+                        <i class="fa-solid fa-shield-halved"></i> <span>Mode Administrateur (Basile)</span>
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight" id="mycollection-title">Mon Classeur de Cartes</h2>
+                    <p class="text-emerald-200/80 text-xs sm:text-sm mt-1">12 cartes Premium (P1-P12) en premier, suivies des 108 cartes normales.</p>
+                </div>
+                <div class="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 flex items-center space-x-6">
+                    <div class="text-center">
+                        <span id="my-owned-count" class="block text-2xl font-extrabold text-emerald-400">0 / 120</span>
+                        <span class="text-[10px] text-emerald-200 uppercase font-bold tracking-wider">Total Possédées</span>
+                    </div>
+                    <div class="w-px h-8 bg-white/20"></div>
+                    <div class="text-center">
+                        <span id="my-missing-count" class="block text-2xl font-extrabold text-amber-400">120</span>
+                        <span class="text-[10px] text-emerald-200 uppercase font-bold tracking-wider">Manquantes</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div class="flex items-center space-x-3 w-full sm:w-auto flex-wrap gap-y-2">
+                    <div class="relative flex-1 sm:w-64">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                        <input type="text" id="my-search" oninput="renderMyCollection()" placeholder="Rechercher..." class="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <select id="my-filter" onchange="renderMyCollection()" class="py-2 px-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <option value="all">Toutes (Afficher tout)</option>
+                        <option value="owned">Uniquement Possédées</option>
+                        <option value="missing">Uniquement Manquantes</option>
+                        <option value="duplicates">Uniquement avec Doublons</option>
+                        <option value="premium">Uniquement Premium (P1-P12)</option>
+                        <option value="normal">Uniquement Normales (1-108)</option>
+                    </select>
+                </div>
+                <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                    <button onclick="myBulkSet(true)" class="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-bold rounded-xl">Tout cocher</button>
+                    <button onclick="myBulkSet(false)" class="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-bold rounded-xl">Tout vider</button>
+                </div>
+            </div>
+
+            <div id="my-cards-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+        </section>
+
+        <!-- TAB 2 -->
+        <section id="tab-exchanges" class="hidden space-y-6">
+            <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-extrabold tracking-tight">Bourse aux Doublons de l'Équipe</h2>
+                    <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">Recherchez une carte pour voir les collègues qui possèdent des doublons.</p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center space-x-3">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                    <input type="text" id="exchange-search" oninput="renderMatrixTable()" placeholder="Rechercher par numéro (ex: P1, 12)..." class="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table id="matrix-table" class="w-full text-left border-collapse"></table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3 -->
+        <section id="tab-colleagues" class="hidden space-y-6">
+            <div class="bg-gradient-to-r from-emerald-900 via-slate-900 to-teal-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-emerald-500/20 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight" id="colleague-banner-title">Classeur de l'Équipe</h2>
+                </div>
+                <div class="flex items-center gap-4 flex-wrap">
+                    <div class="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10">
+                        <label class="block text-[10px] text-emerald-200 uppercase font-bold tracking-wider mb-1">Sélectionner un collègue :</label>
+                        <select id="colleague-selector" onchange="renderColleaguesCollectionTab()" class="py-2 px-3 bg-slate-900 text-white border border-slate-700 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div id="colleague-cards-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+        </section>
+    </main>
+
+    <!-- MODAL QUANTITÉ -->
+    <div id="card-qty-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-5 text-center">
+            <div>
+                <span id="modal-card-badge" class="inline-block px-3 py-1 rounded-full text-xs font-bold mb-2"></span>
+                <h3 id="modal-card-title" class="text-lg font-extrabold">Carte #</h3>
+            </div>
+            <input type="hidden" id="modal-card-key">
+            <input type="hidden" id="modal-target-colid">
+            <div class="flex items-center justify-center space-x-3">
+                <button onclick="adjustModalQty(-1)" class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xl font-bold flex items-center justify-center">-</button>
+                <div class="flex-1 max-w-[120px]">
+                    <input type="number" id="modal-qty-input" min="0" class="w-full text-center text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                </div>
+                <button onclick="adjustModalQty(1)" class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xl font-bold flex items-center justify-center">+</button>
+            </div>
+            <div class="grid grid-cols-2 gap-2 pt-2">
+                <button onclick="setModalQty(0)" class="py-2.5 bg-red-500/10 text-red-400 text-xs font-bold rounded-xl transition">Aucune (0)</button>
+                <button onclick="saveModalQty()" class="py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md transition">Valider</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PROFIL -->
+    <div id="profile-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold">Sélectionnez votre profil</h3>
+                <button onclick="closeModal('profile-modal')" class="text-slate-400 p-2"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="profile-list" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-1"></div>
+            <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                <button onclick="openColleagueModal(); closeModal('profile-modal');" class="text-xs text-emerald-600 font-bold hover:underline"><i class="fa-solid fa-plus mr-1"></i> Créer un nouveau profil</button>
+                <button onclick="closeModal('profile-modal')" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-xs font-bold rounded-xl">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL AJOUT PROFIL -->
+    <div id="colleague-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold">Créer un nouveau profil</h3>
+                <button onclick="closeModal('colleague-modal')" class="text-slate-400 p-2"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-4">
+                <input type="text" id="colleague-name" placeholder="ex: Mon second pseudo..." class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                <div class="pt-2 flex justify-end space-x-2">
+                    <button onclick="closeModal('colleague-modal')" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-xs font-bold rounded-xl">Annuler</button>
+                    <button onclick="saveColleague()" class="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-md">Enregistrer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl border border-slate-800 flex items-center space-x-2.5 text-xs font-bold">
+        <i class="fa-solid fa-circle-check text-emerald-400 text-base"></i>
+        <span id="toast-text">Action réussie</span>
+    </div>
+
+    <script>
+        const STORAGE_URL = "https://json.extendsclass.com/bin/3424681640c4";
+
+        let db = {
+            currentUserId: null,
+            colleagues: [
+                { id: "col_basile", name: "Basile", avatar: "👑", collection: {}, createdBy: "admin" }
+            ],
+            cards: {}
+        };
+
+        for (let i = 1; i <= 12; i++) {
+            db.cards[`P${i}`] = { name: `Carte Premium #${i}`, image: `images/P${i}.png`, isPremium: true };
+        }
+        for (let i = 1; i <= 108; i++) {
+            db.cards[i.toString()] = { name: `Carte #${i}`, image: `images/${i}.png`, isPremium: false };
+        }
+
+        let isUpdating = false;
+
+        async function syncWithCloud() {
+            if (isUpdating) return;
+            try {
+                const response = await fetch(STORAGE_URL);
+                const remoteData = await response.json();
+                if (remoteData && remoteData.colleagues && remoteData.colleagues.length > 0) {
+                    isUpdating = true;
+                    // On fusionne proprement les profils distants sans écraser les modifications locales en cours
+                    remoteData.colleagues.forEach(remoteCol => {
+                        let existing = db.colleagues.find(c => c.id === remoteCol.id);
+                        if (!existing) {
+                            db.colleagues.push(remoteCol);
+                        }
+                    });
+                    isUpdating = false;
+                }
+            } catch(e) {}
+        }
+
+        function saveAndPushCloud() {
+            if (isUpdating) return;
+            localStorage.setItem("collabcards_net_v7", JSON.stringify(db));
+
+            fetch(STORAGE_URL, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ colleagues: db.colleagues })
+            }).catch(err => console.error("Erreur sync cloud:", err));
+        }
+
+        function validateUserAndRefresh() {
+            let basile = db.colleagues.find(c => c.name.toLowerCase().trim() === "basile");
+            if (!basile) {
+                db.colleagues.unshift({ id: "col_basile", name: "Basile", avatar: "👑", collection: {}, createdBy: "admin" });
+            }
+
+            const activeId = localStorage.getItem('collabcards_active_user');
+            if (activeId && db.colleagues.some(c => c.id === activeId)) {
+                db.currentUserId = activeId;
+                document.getElementById('welcome-modal').classList.add('hidden');
+                refreshCurrentView();
+            } else {
+                db.currentUserId = null;
+                document.getElementById('welcome-modal').classList.remove('hidden');
+            }
+        }
+
+        async function loadInitialState() {
+            if (localStorage.getItem('collabcards_dark') === 'true') {
+                document.documentElement.classList.add('dark');
+                document.getElementById('theme-icon').className = "fa-solid fa-sun text-xs";
+            }
+
+            try {
+                const response = await fetch(STORAGE_URL);
+                const remoteData = await response.json();
+                if (remoteData && remoteData.colleagues && remoteData.colleagues.length > 0) {
+                    db.colleagues = remoteData.colleagues;
+                }
+            } catch(e) {
+                const local = localStorage.getItem("collabcards_net_v7");
+                if (local) {
+                    try {
+                        const parsed = JSON.parse(local);
+                        if (parsed.colleagues) db.colleagues = parsed.colleagues;
+                    } catch(e) {}
+                }
+            }
+            
+            validateUserAndRefresh();
+            setInterval(syncWithCloud, 3000);
+        }
+
+        function registerFirstUser() {
+            const name = document.getElementById('welcome-name-input').value.trim();
+            if (!name) { alert("Entre ton prénom."); return; }
+            const isBasile = name.toLowerCase() === "basile";
+
+            let existingUser = db.colleagues.find(c => c.name.toLowerCase() === name.toLowerCase());
+            
+            if (existingUser) {
+                db.currentUserId = existingUser.id;
+            } else {
+                const newId = 'col_' + Date.now();
+                const newProfile = { 
+                    id: newId, 
+                    name: isBasile ? "Basile" : name, 
+                    avatar: isBasile ? "👑" : "😎", 
+                    collection: {}, 
+                    createdBy: isBasile ? "admin" : "user" 
+                };
+                db.colleagues.push(newProfile);
+                db.currentUserId = newId;
+            }
+
+            localStorage.setItem('collabcards_active_user', db.currentUserId);
+            saveAndPushCloud();
+            document.getElementById('welcome-modal').classList.add('hidden');
+            refreshCurrentView();
+            showToast(`Bienvenue ${name} !`);
+        }
+
+        function disconnectProfile() {
+            localStorage.removeItem('collabcards_active_user');
+            db.currentUserId = null;
+            document.getElementById('welcome-name-input').value = '';
+            document.getElementById('welcome-modal').classList.remove('hidden');
+            showToast("Déconnecté avec succès.");
+        }
+
+        function toggleDarkMode() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('collabcards_dark', isDark);
+            document.getElementById('theme-icon').className = isDark ? "fa-solid fa-sun text-xs" : "fa-solid fa-moon text-xs";
+        }
+
+        function getCurrentUser() {
+            return db.colleagues.find(c => c.id === db.currentUserId) || db.colleagues[0];
+        }
+
+        function isAdmin() {
+            const user = getCurrentUser();
+            return user && user.name.toLowerCase().trim() === "basile";
+        }
+
+        function switchTab(tab) {
+            ['mycollection', 'exchanges', 'colleagues'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                const btnDesk = document.getElementById(`nav-${t}`);
+                const btnMob = document.getElementById(`mob-${t}`);
+                if(btnDesk) {
+                    if(t === tab) {
+                        btnDesk.className = "px-4 py-2 rounded-xl text-xs font-bold transition-all bg-emerald-600 text-white shadow-md shadow-emerald-600/20";
+                    } else {
+                        btnDesk.className = "px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white";
+                    }
+                }
+                if(btnMob) {
+                    if(t === tab) {
+                        btnMob.className = "flex-1 py-3 text-center text-xs font-bold text-emerald-600 dark:text-emerald-400 border-b-2 border-emerald-600";
+                    } else {
+                        btnMob.className = "flex-1 py-3 text-center text-xs font-bold text-slate-500 dark:text-slate-400";
+                    }
+                }
+            });
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            refreshCurrentView();
+        }
+
+        function refreshCurrentView() {
+            const user = getCurrentUser();
+            if (!user) return;
+            document.getElementById('header-user-name').innerText = user.name + (isAdmin() ? " (Admin 👑)" : "");
+            document.getElementById('mycollection-title').innerText = `Classeur de ${user.name}`;
+            
+            const adminBtn = document.getElementById('admin-add-colleague-btn');
+            if (isAdmin()) {
+                adminBtn.classList.remove('hidden');
+                adminBtn.classList.add('flex');
+            } else {
+                adminBtn.classList.add('hidden');
+                adminBtn.classList.remove('flex');
+            }
+
+            const adminBanner = document.getElementById('admin-banner-pill');
+            if (isAdmin()) {
+                adminBanner.classList.remove('hidden');
+            } else {
+                adminBanner.classList.add('hidden');
+            }
+
+            const activeSec = document.querySelector('main > section:not(.hidden)');
+            if (!activeSec) return;
+            if (activeSec.id === 'tab-mycollection') renderMyCollection();
+            if (activeSec.id === 'tab-exchanges') renderMatrixTable();
+            if (activeSec.id === 'tab-colleagues') initColleaguesCollectionTab();
+        }
+
+        function getAllKeys() {
+            let keys = [];
+            for (let i = 1; i <= 12; i++) keys.push(`P${i}`);
+            for (let i = 1; i <= 108; i++) keys.push(i.toString());
+            return keys;
+        }
+
+        function renderMyCollection() {
+            const user = getCurrentUser();
+            const grid = document.getElementById('my-cards-grid');
+            const search = document.getElementById('my-search').value.toLowerCase();
+            const filter = document.getElementById('my-filter').value;
+
+            let ownedCount = 0, html = '';
+            getAllKeys().forEach(key => {
+                const card = db.cards[key];
+                if (!card) return;
+                const qty = user.collection[key] || 0;
+                const isOwned = qty > 0;
+                if (isOwned) ownedCount++;
+
+                if (search && !key.toLowerCase().includes(search) && !card.name.toLowerCase().includes(search)) return;
+                if (filter === 'owned' && !isOwned) return;
+                if (filter === 'missing' && isOwned) return;
+                if (filter === 'premium' && !card.isPremium) return;
+                if (filter === 'normal' && card.isPremium) return;
+
+                let cardStyle = "";
+                if (card.isPremium) {
+                    cardStyle = isOwned ? "card-premium-owned-glow" : "card-missing bg-amber-500/5";
+                } else {
+                    cardStyle = isOwned ? "card-owned-glow bg-white dark:bg-slate-900" : "card-missing bg-white dark:bg-slate-900";
+                }
+                
+                html += `<div onclick="openQtyModal('${user.id}', '${key}')" class="${cardStyle} rounded-2xl p-3 border border-slate-200 dark:border-slate-800 flex flex-col justify-between cursor-pointer select-none transition-all">
+                    <div>
+                        <div class="relative aspect-[3/4] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-950 mb-2 border border-slate-200 dark:border-slate-800">
+                            <img src="${card.image}" onerror="this.src='https://placehold.co/300x400/1e293b/22c55e?text=Card+${key}'" class="w-full h-full object-cover">
+                            <span class="absolute top-2 left-2 ${card.isPremium ? 'card-premium-badge text-white font-bold' : 'bg-slate-900/80 text-white'} text-[10px] px-2 py-0.5 rounded-md">${card.isPremium ? '✨ P' + key : '#' + key}</span>
+                            ${qty > 0 ? `<span class="absolute top-2 right-2 bg-indigo-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">${qty} ex.</span>` : ''}
+                        </div>
+                        <h4 class="font-bold text-xs truncate">${card.name}</h4>
+                    </div>
+                </div>`;
+            });
+            grid.innerHTML = html;
+            document.getElementById('my-owned-count').innerText = `${ownedCount} / 120`;
+            document.getElementById('my-missing-count').innerText = 120 - ownedCount;
+        }
+
+        function initColleaguesCollectionTab() {
+            const selector = document.getElementById('colleague-selector');
+            selector.innerHTML = '';
+            
+            db.colleagues.forEach(c => {
+                selector.innerHTML += `<option value="${c.id}">${c.name} ${c.id === db.currentUserId ? '(Moi)' : ''}</option>`;
+            });
+
+            selector.value = db.currentUserId;
+            renderColleaguesCollectionTab();
+        }
+
+        function renderColleaguesCollectionTab() {
+            const selector = document.getElementById('colleague-selector');
+            const targetId = selector.value || db.currentUserId;
+            const targetCol = db.colleagues.find(c => c.id === targetId) || getCurrentUser();
+            document.getElementById('colleague-banner-title').innerText = `Classeur de ${targetCol.name}`;
+            
+            let html = '';
+            getAllKeys().forEach(key => {
+                const card = db.cards[key];
+                const qty = targetCol.collection[key] || 0;
+                const isOwned = qty > 0;
+                let cardStyle = isOwned ? (card.isPremium ? "card-premium-owned-glow" : "card-owned-glow bg-white dark:bg-slate-900") : "card-missing bg-white dark:bg-slate-900";
+
+                html += `<div onclick="openQtyModal('${targetCol.id}', '${key}')" class="${cardStyle} rounded-2xl p-3 border border-slate-200 dark:border-slate-800 cursor-pointer transition-all">
+                    <div class="relative aspect-[3/4] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-950 mb-2 border border-slate-200 dark:border-slate-800">
+                        <img src="${card.image}" onerror="this.src='https://placehold.co/300x400/1e293b/22c55e?text=Card+${key}'" class="w-full h-full object-cover">
+                        <span class="absolute top-2 left-2 ${card.isPremium ? 'card-premium-badge text-white font-bold' : 'bg-slate-900/80 text-white'} text-[10px] px-2 py-0.5 rounded-md">${card.isPremium ? '✨ P' + key : '#' + key}</span>
+                        ${qty > 0 ? `<span class="absolute top-2 right-2 bg-indigo-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">${qty} ex.</span>` : ''}
+                    </div>
+                    <h4 class="font-bold text-xs truncate">${card.name}</h4>
+                </div>`;
+            });
+            document.getElementById('colleague-cards-grid').innerHTML = html;
+        }
+
+        function openQtyModal(colId, key) {
+            const targetCol = db.colleagues.find(c => c.id === colId);
+            if (!targetCol) return;
+
+            document.getElementById('modal-target-colid').value = colId;
+            document.getElementById('modal-card-key').value = key;
+            document.getElementById('modal-qty-input').value = targetCol.collection[key] || 0;
+            document.getElementById('modal-card-title').innerText = db.cards[key].name;
+            
+            const badge = document.getElementById('modal-card-badge');
+            const card = db.cards[key];
+            if (card.isPremium) {
+                badge.className = "card-premium-badge text-white text-xs font-bold px-3 py-1 rounded-full";
+                badge.innerText = `✨ Carte Premium ${key}`;
+            } else {
+                badge.className = "bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full";
+                badge.innerText = `Carte Normale #${key}`;
+            }
+
+            document.getElementById('card-qty-modal').classList.remove('hidden');
+        }
+
+        function adjustModalQty(delta) {
+            let input = document.getElementById('modal-qty-input');
+            let val = (parseInt(input.value) || 0) + delta;
+            if (val < 0) val = 0;
+            input.value = val;
+        }
+        function setModalQty(val) { document.getElementById('modal-qty-input').value = val; }
+
+        function saveModalQty() {
+            const colId = document.getElementById('modal-target-colid').value;
+            const key = document.getElementById('modal-card-key').value;
+            const qty = parseInt(document.getElementById('modal-qty-input').value) || 0;
+            const col = db.colleagues.find(c => c.id === colId);
+            
+            if (col) {
+                if (qty === 0) delete col.collection[key];
+                else col.collection[key] = qty;
+                saveAndPushCloud();
+                closeModal('card-qty-modal');
+                refreshCurrentView();
+                showToast("Mis à jour en direct !");
+            }
+        }
+
+        function renderMatrixTable() {
+            const table = document.getElementById('matrix-table');
+            let html = `<thead><tr class="bg-slate-100 dark:bg-slate-950 text-[11px] font-bold text-slate-500 uppercase"><th class="p-3.5">Carte (Doublons)</th>`;
+            db.colleagues.forEach(c => { html += `<th class="p-3.5 text-center">${c.avatar} ${c.name}</th>`; });
+            html += `</tr></thead><tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">`;
+
+            getAllKeys().forEach(key => {
+                const hasDup = db.colleagues.some(c => (c.collection[key] || 0) > 1);
+                if (!hasDup) return;
+                const card = db.cards[key];
+                html += `<tr><td class="p-3.5 font-bold">${card.name}</td>`;
+                db.colleagues.forEach(c => {
+                    let qty = c.collection[key] || 0;
+                    html += `<td class="p-3.5 text-center"><span onclick="openQtyModal('${c.id}', '${key}')" class="px-2 py-1 rounded bg-indigo-600 text-white cursor-pointer font-bold shadow-sm">${qty > 1 ? qty + ' ex.' : '-'}</span></td>`;
+                });
+                html += `</tr>`;
+            });
+            table.innerHTML = html + `</tbody>`;
+        }
+
+        function openProfileSelector() {
+            const list = document.getElementById('profile-list');
+            let html = '';
+
+            // Affiche tous les profils disponibles pour permettre de switcher facilement
+            if (!db.colleagues || db.colleagues.length === 0) {
+                list.innerHTML = `<div class="p-4 text-center text-slate-400 text-xs">Aucun profil trouvé.</div>`;
+            } else {
+                db.colleagues.forEach(c => {
+                    const isCurrent = c.id === db.currentUserId;
+                    html += `<div onclick="switchProfile('${c.id}')" class="p-3 rounded-2xl border cursor-pointer flex justify-between items-center ${isCurrent ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-700 dark:text-emerald-300' : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-slate-400'}">
+                        <div class="flex items-center space-x-3">
+                            <span class="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-base shadow-sm">${c.avatar}</span>
+                            <div>
+                                <h4 class="font-bold text-xs">${c.name}</h4>
+                                <span class="text-[10px] text-slate-400">${Object.keys(c.collection).length} cartes possédées</span>
+                            </div>
+                        </div>
+                        ${isCurrent ? '<i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>' : ''}
+                    </div>`;
+                });
+            }
+            document.getElementById('profile-modal').classList.remove('hidden');
+        }
+
+        function switchProfile(id) {
+            db.currentUserId = id;
+            localStorage.setItem('collabcards_active_user', id);
+            closeModal('profile-modal');
+            refreshCurrentView();
+            showToast("Profil changé avec succès !");
+        }
+
+        function openColleagueModal() { document.getElementById('colleague-modal').classList.remove('hidden'); }
+        
+        function saveColleague() {
+            const name = document.getElementById('colleague-name').value.trim();
+            if (!name) return;
+            const isBasile = name.toLowerCase() === "basile";
+
+            let existing = db.colleagues.find(c => c.name.toLowerCase() === name.toLowerCase());
+            
+            if (existing) {
+                db.currentUserId = existing.id;
+            } else {
+                const newId = 'col_' + Date.now();
+                db.colleagues.push({ 
+                    id: newId, 
+                    name: isBasile ? "Basile" : name, 
+                    avatar: isBasile ? "👑" : "😎", 
+                    collection: {}, 
+                    createdBy: isBasile ? "admin" : "user" 
+                });
+                db.currentUserId = newId;
+            }
+
+            localStorage.setItem('collabcards_active_user', db.currentUserId);
+            saveAndPushCloud();
+            document.getElementById('colleague-name').value = '';
+            closeModal('colleague-modal');
+            closeModal('profile-modal');
+            refreshCurrentView();
+            showToast(`Profil ${name} sélectionné !`);
+        }
+
+        function myBulkSet(status) {
+            const user = getCurrentUser();
+            getAllKeys().forEach(key => {
+                if (status) user.collection[key] = 1;
+                else delete user.collection[key];
+            });
+            saveAndPushCloud();
+            refreshCurrentView();
+            showToast("Classeur mis à jour");
+        }
+
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        function showToast(text) {
+            const t = document.getElementById('toast');
+            document.getElementById('toast-text').innerText = text;
+            t.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => t.classList.add('translate-y-20', 'opacity-0'), 3000);
+        }
+
+        window.onload = function() {
+            loadInitialState();
+        }
+    </script>
+</body>
+</html>
