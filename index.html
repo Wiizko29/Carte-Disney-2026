@@ -277,7 +277,10 @@
                         if (!existing) {
                             db.colleagues.push(remoteCol);
                         } else {
-                            existing.collection = remoteCol.collection;
+                            // On fusionne intelligemment : on garde les cartes si le cloud en a, ou on garde les locales si le cloud est vide
+                            if (Object.keys(remoteCol.collection).length > 0 || Object.keys(existing.collection).length === 0) {
+                                existing.collection = remoteCol.collection;
+                            }
                         }
                     });
                     isUpdating = false;
@@ -288,6 +291,9 @@
 
         function saveAndPushCloud() {
             if (isUpdating) return;
+            // Sauvegarde locale de secours renforcée
+            localStorage.setItem("collabcards_net_v15", JSON.stringify(db));
+
             fetch(STORAGE_URL, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -310,7 +316,18 @@
                 document.getElementById('theme-icon').className = "fa-solid fa-sun text-xs";
             }
 
-            // Récupérer les données cloud
+            // 1. Charger le cache local en premier pour ne jamais perdre les données instantanément
+            const local = localStorage.getItem("collabcards_net_v15");
+            if (local) {
+                try {
+                    const parsed = JSON.parse(local);
+                    if (parsed.colleagues && parsed.colleagues.length > 0) {
+                        db.colleagues = parsed.colleagues;
+                    }
+                } catch(e) {}
+            }
+
+            // 2. Synchroniser avec le cloud ensuite sans écraser les données locales existantes
             try {
                 const response = await fetch(STORAGE_URL);
                 const remoteData = await response.json();
@@ -320,13 +337,14 @@
                         if (!existing) {
                             db.colleagues.push(remoteCol);
                         } else {
-                            existing.collection = remoteCol.collection;
+                            if (Object.keys(remoteCol.collection).length > 0) {
+                                existing.collection = remoteCol.collection;
+                            }
                         }
                     });
                 }
             } catch(e) {}
 
-            // Vérifier l'URL (paramètre ?user=...) ou le stockage persistant
             const urlParams = new URLSearchParams(window.location.search);
             let activeName = urlParams.get('user') || localStorage.getItem('collabcards_active_username');
 
@@ -381,7 +399,6 @@
             localStorage.setItem('collabcards_active_username', db.currentUserName);
             saveAndPushCloud();
 
-            // Mettre à jour l'URL proprement sans recharger pour verrouiller la session
             const newUrl = window.location.pathname + '?user=' + encodeURIComponent(db.currentUserName);
             window.history.replaceState({}, '', newUrl);
 
@@ -392,7 +409,6 @@
 
         function disconnectProfile() {
             localStorage.removeItem('collabcards_active_username');
-            // Nettoyer l'URL
             window.history.replaceState({}, '', window.location.pathname);
             db.currentUserName = null;
             document.getElementById('welcome-name-input').value = '';
