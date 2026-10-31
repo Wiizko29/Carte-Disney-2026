@@ -108,6 +108,20 @@
         </div>
     </div>
 
+    <!-- MODAL POPUP CONFIRMATION DEMANDE ENVOYÉE -->
+    <div id="request-success-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-5 text-center">
+            <div class="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-3xl mx-auto shadow-inner">
+                <i class="fa-solid fa-paper-plane"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-extrabold">Demande envoyée !</h3>
+                <p id="request-success-text" class="text-xs text-slate-500 mt-2">Ta demande a bien été transmise à ton collègue. Il la verra dès sa prochaine connexion.</p>
+            </div>
+            <button onclick="closeModal('request-success-modal')" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-2xl shadow-md transition">Super, merci !</button>
+        </div>
+    </div>
+
     <!-- MODAL ZOOM CARTE -->
     <div id="card-zoom-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 text-center">
@@ -368,7 +382,7 @@
             colleagues: [
                 { id: "col_basile", name: "Basile", avatar: "👑", collection: {}, createdBy: "admin" }
             ],
-            requests: [], // Tableau partagé pour les demandes d'échange
+            requests: [],
             cards: {}
         };
 
@@ -678,7 +692,7 @@
             }
         }
 
-        // Fonction pour envoyer une demande d'échange à un collègue
+        // Envoyer une demande et ouvrir la popup de confirmation visuelle
         function requestDuplicate(ownerName, cardKey) {
             const currentUser = getCurrentUser();
             if (!currentUser) return;
@@ -690,7 +704,6 @@
 
             if (!db.requests) db.requests = [];
 
-            // Vérifier si la demande existe déjà
             const exists = db.requests.some(r => r.from === currentUser.name && r.to === ownerName && r.cardKey === cardKey && !r.resolved);
             if (exists) {
                 showToast("Tu as déjà envoyé une demande pour cette carte à ce collègue.");
@@ -707,7 +720,13 @@
             });
 
             saveAndPushCloud();
-            showToast(`Demande envoyée à ${ownerName} avec succès ! 🚀`);
+
+            // Affichage de la popup de confirmation visuelle
+            const card = db.cards[cardKey];
+            const cardName = card ? card.name : `Carte #${cardKey}`;
+            document.getElementById('request-success-text').innerHTML = `Ta demande pour la carte <strong>${cardName}</strong> a bien été transmise à <strong>${ownerName}</strong> ! Il la verra dès sa prochaine connexion.`;
+            document.getElementById('request-success-modal').classList.remove('hidden');
+
             updateNotificationsBanner();
         }
 
@@ -722,7 +741,6 @@
 
             if (!db.requests) db.requests = [];
 
-            // Filtrer les demandes reçues par le user connecté et non résolues
             const myRequests = db.requests.filter(r => r.to.toLowerCase() === currentUser.name.toLowerCase() && !r.resolved);
 
             if (myRequests.length > 0) {
@@ -736,10 +754,10 @@
                     const cardName = card ? card.name : `Carte #${req.cardKey}`;
                     html += `<div class="bg-white/10 backdrop-blur-md p-3 rounded-2xl flex items-center justify-between gap-4 text-xs">
                         <div>
-                            <strong>${req.from}</strong> aimerait récupérer ton doublon de <strong>${cardName}</strong> (${req.cardKey === 'P' ? 'Premium' : '#' + req.cardKey}).
+                            <strong>${req.from}</strong> aimerait récupérer ton doublon de <strong>${cardName}</strong> (${req.cardKey.startsWith('P') ? 'Premium' : '#' + req.cardKey}).
                         </div>
-                        <button onclick="resolveRequest('${req.id}')" class="px-3 py-1.5 bg-white text-orange-600 font-bold rounded-xl hover:bg-orange-50 transition shadow-sm flex-shrink-0">
-                            C'est fait / OK 👍
+                        <button onclick="resolveRequest('${req.id}', '${req.to}', '${req.cardKey}')" class="px-3 py-1.5 bg-white text-orange-600 font-bold rounded-xl hover:bg-orange-50 transition shadow-sm flex-shrink-0">
+                            C'est fait / OK 👍 (-1 ex.)
                         </button>
                     </div>`;
                 });
@@ -750,14 +768,27 @@
             }
         }
 
-        function resolveRequest(reqId) {
+        // Lorsque la personne valide, on résout la demande ET on retire automatiquement un doublon de son classeur
+        function resolveRequest(reqId, ownerName, cardKey) {
             if (!db.requests) return;
             const req = db.requests.find(r => r.id === reqId);
             if (req) {
                 req.resolved = true;
+
+                // Retirer automatiquement un doublon du propriétaire de la carte
+                const owner = db.colleagues.find(c => c.name.toLowerCase() === ownerName.toLowerCase());
+                if (owner && owner.collection[cardKey]) {
+                    owner.collection[cardKey] -= 1;
+                    if (owner.collection[cardKey] <= 0) {
+                        delete owner.collection[cardKey];
+                    }
+                }
+
                 saveAndPushCloud();
                 updateNotificationsBanner();
-                showToast("Demande marquée comme résolue !");
+                refreshCurrentView();
+                renderMatrixTable();
+                showToast("Échange validé : un doublon a été automatiquement retiré de ton classeur !");
             }
         }
 
@@ -981,7 +1012,6 @@
             }
         }
 
-        // Rendu de l'onglet Échanges avec le bouton de demande intégré dans chaque encadré
         function renderMatrixTable() {
             const container = document.getElementById('exchanges-cards-container');
             const searchVal = document.getElementById('exchange-search').value.toLowerCase().trim();
