@@ -22,7 +22,7 @@
         "2": 3,
         "3": 1,
         "6": 1,
-        "P8": 6,
+        "P8": 5,
         "P13": 1,
         "P9": 1,
         "P7": 1
@@ -142,14 +142,6 @@
       "to": "Basile",
       "cardKey": "P2",
       "resolved": true,
-      "date": "01/11/2026"
-    },
-    {
-      "id": "req_1793488681112",
-      "from": "Basile",
-      "to": "julie",
-      "cardKey": "P8",
-      "resolved": false,
       "date": "01/11/2026"
     }
   ]
