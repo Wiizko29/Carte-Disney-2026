@@ -455,7 +455,6 @@
         }
 
         async function saveAndPushCloud() {
-            lastLocalActionTime = Date.now(); // Active le verrou anti-saut de 25 secondes
             try {
                 const response = await fetch(WORKER_URL, {
                     method: "POST",
@@ -481,7 +480,7 @@
         }
 
         async function loadInitialState() {
-            if (localStorage.getItem('collabcards_dark') === 'true') {
+            if (localStorage.getItem('collabcards_dark'] === 'true') {
                 document.documentElement.classList.add('dark');
                 document.getElementById('theme-icon').className = "fa-solid fa-sun text-xs";
             }
@@ -715,6 +714,7 @@
         function saveProfileAvatar() {
             const user = getCurrentUser();
             if (user && tempAvatarBase64) {
+                lastLocalActionTime = Date.now(); // Verrou anti-saut activé
                 user.avatar = tempAvatarBase64;
                 saveAndPushCloud();
                 refreshCurrentView();
@@ -741,6 +741,7 @@
                 return;
             }
 
+            lastLocalActionTime = Date.now(); // Verrou anti-saut activé
             db.requests.push({
                 id: 'req_' + Date.now(),
                 from: currentUser.name,
@@ -849,10 +850,12 @@
         }
 
         function resolveRequest(reqId, ownerName, cardKey) {
+            lastLocalActionTime = Date.now(); // ACTIVÉ ICI EN PRIORITÉ ABSOLUE pour bloquer le re-téléchargement intempestif !
+
             if (!db.requests) return;
             const req = db.requests.find(r => r.id === reqId);
             if (req) {
-                req.resolved = true; // Marqué comme résolu instantanément
+                req.resolved = true;
 
                 const owner = db.colleagues.find(c => c.name.toLowerCase() === ownerName.toLowerCase());
                 if (owner && owner.collection[cardKey]) {
@@ -862,7 +865,7 @@
                     }
                 }
 
-                saveAndPushCloud(); // Enregistre sur Cloudflare/GitHub et active le verrou anti-saut de 25s
+                saveAndPushCloud();
                 updateNotificationsBanner();
                 refreshCurrentView();
                 renderMatrixTable();
