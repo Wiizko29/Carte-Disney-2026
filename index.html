@@ -137,16 +137,16 @@
                         <i class="fa-solid fa-shield-halved"></i> <span>Mode Administrateur (Basile)</span>
                     </div>
                     <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight" id="mycollection-title">Mon Classeur de Cartes</h2>
-                    <p class="text-emerald-200/80 text-xs sm:text-sm mt-1">12 cartes Premium (P1-P12) en premier, suivies des 108 cartes normales.</p>
+                    <p class="text-emerald-200/80 text-xs sm:text-sm mt-1">24 cartes Premium (P1-P24) en premier, suivies des 108 cartes normales.</p>
                 </div>
                 <div class="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 flex items-center space-x-6">
                     <div class="text-center">
-                        <span id="my-owned-count" class="block text-2xl font-extrabold text-emerald-400">0 / 120</span>
+                        <span id="my-owned-count" class="block text-2xl font-extrabold text-emerald-400">0 / 132</span>
                         <span class="text-[10px] text-emerald-200 uppercase font-bold tracking-wider">Total Possédées</span>
                     </div>
                     <div class="w-px h-8 bg-white/20"></div>
                     <div class="text-center">
-                        <span id="my-missing-count" class="block text-2xl font-extrabold text-amber-400">120</span>
+                        <span id="my-missing-count" class="block text-2xl font-extrabold text-amber-400">132</span>
                         <span class="text-[10px] text-emerald-200 uppercase font-bold tracking-wider">Manquantes</span>
                     </div>
                 </div>
@@ -163,7 +163,7 @@
                         <option value="owned">Uniquement Possédées</option>
                         <option value="missing">Uniquement Manquantes</option>
                         <option value="duplicates">Uniquement avec Doublons</option>
-                        <option value="premium">Uniquement Premium (P1-P12)</option>
+                        <option value="premium">Uniquement Premium (P1-P24)</option>
                         <option value="normal">Uniquement Normales (1-108)</option>
                     </select>
                 </div>
@@ -209,12 +209,12 @@
                 <div class="flex items-center gap-4 flex-wrap">
                     <div class="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 flex items-center space-x-6">
                         <div class="text-center">
-                            <span id="colleague-owned-count" class="block text-2xl font-extrabold text-emerald-400">0 / 120</span>
+                            <span id="colleague-owned-count" class="block text-2xl font-extrabold text-emerald-400">0 / 132</span>
                             <span class="text-[10px] text-emerald-200 uppercase font-bold tracking-wider">Total Possédées</span>
                         </div>
                         <div class="w-px h-8 bg-white/20"></div>
                         <div class="text-center">
-                            <span id="colleague-missing-count" class="block text-2xl font-extrabold text-amber-400">120</span>
+                            <span id="colleague-missing-count" class="block text-2xl font-extrabold text-amber-400">132</span>
                             <span class="text-[10px] text-emerald-200 uppercase font-bold tracking-wider">Manquantes</span>
                         </div>
                     </div>
@@ -245,7 +245,7 @@
                         <option value="owned">Uniquement Possédées</option>
                         <option value="missing">Uniquement Manquantes</option>
                         <option value="duplicates">Uniquement avec Doublons</option>
-                        <option value="premium">Uniquement Premium (P1-P12)</option>
+                        <option value="premium">Uniquement Premium (P1-P24)</option>
                         <option value="normal">Uniquement Normales (1-108)</option>
                     </select>
                 </div>
@@ -298,7 +298,7 @@
 
         let selectedColleagueIdForTab = null;
 
-        for (let i = 1; i <= 12; i++) {
+        for (let i = 1; i <= 24; i++) {
             db.cards[`P${i}`] = { name: `Carte Premium #${i}`, image: `premium.png`, isPremium: true };
         }
         for (let i = 1; i <= 108; i++) {
@@ -506,7 +506,7 @@
 
         function getAllKeys() {
             let keys = [];
-            for (let i = 1; i <= 12; i++) keys.push(`P${i}`);
+            for (let i = 1; i <= 24; i++) keys.push(`P${i}`);
             for (let i = 1; i <= 108; i++) keys.push(i.toString());
             return keys;
         }
@@ -550,8 +550,8 @@
                 </div>`;
             });
             grid.innerHTML = html;
-            document.getElementById('my-owned-count').innerText = `${ownedCount} / 120`;
-            document.getElementById('my-missing-count').innerText = 120 - ownedCount;
+            document.getElementById('my-owned-count').innerText = `${ownedCount} / 132`;
+            document.getElementById('my-missing-count').innerText = 132 - ownedCount;
         }
 
         function initColleaguesCollectionTab() {
@@ -615,8 +615,8 @@
                 </div>`;
             });
             grid.innerHTML = html;
-            document.getElementById('colleague-owned-count').innerText = `${ownedCount} / 120`;
-            document.getElementById('colleague-missing-count').innerText = 120 - ownedCount;
+            document.getElementById('colleague-owned-count').innerText = `${ownedCount} / 132`;
+            document.getElementById('colleague-missing-count').innerText = 132 - ownedCount;
         }
 
         function deleteSelectedColleague() {
