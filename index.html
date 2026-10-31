@@ -255,6 +255,7 @@
 
     <script>
         const GH_FILE = "database.json";
+        const WORKER_URL = "https://cartedisneysync.wiizko60.workers.dev"; // Ton URL Cloudflare Worker
 
         let db = {
             currentUserName: null,
@@ -271,7 +272,7 @@
             db.cards[i.toString()] = { name: `Carte #${i}`, image: `${i}.png`, isPremium: false };
         }
 
-        // Chargement direct du fichier json public sans token (zéro erreur 401)
+        // Chargement automatique et persistant des données partagées
         async function syncWithCloud() {
             try {
                 const response = await fetch(`${GH_FILE}?t=${Date.now()}`);
@@ -294,9 +295,21 @@
             } catch(e) {}
         }
 
-        // Fonction neutre pour éviter les blocages API
-        function saveAndPushCloud() {
-            showToast("Modifications prises en compte !");
+        // Sauvegarde automatique et en direct vers GitHub via le Worker Cloudflare
+        async function saveAndPushCloud() {
+            try {
+                const response = await fetch(WORKER_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ data: { colleagues: db.colleagues } })
+                });
+                const resJson = await response.json();
+                if (!resJson.success) {
+                    console.error("Erreur de sauvegarde:", resJson.error);
+                }
+            } catch(err) {
+                console.error("Erreur réseau Worker:", err);
+            }
         }
 
         function getCurrentUser() {
@@ -337,6 +350,7 @@
                         createdBy: isBasile ? "admin" : "user" 
                     };
                     db.colleagues.push(found);
+                    saveAndPushCloud();
                 }
                 db.currentUserName = found.name;
                 localStorage.setItem('collabcards_active_username', db.currentUserName);
@@ -367,6 +381,7 @@
                 };
                 db.colleagues.push(newProfile);
                 db.currentUserName = newProfile.name;
+                saveAndPushCloud();
             }
 
             localStorage.setItem('collabcards_active_username', db.currentUserName);
@@ -555,6 +570,7 @@
 
             if (confirm(`Es-tu sûr de vouloir supprimer le profil de ${targetCol.name} ? Cette action est irréversible.`)) {
                 db.colleagues = db.colleagues.filter(c => c.id !== targetId);
+                saveAndPushCloud();
                 refreshCurrentView();
                 showToast(`Profil de ${targetCol.name} supprimé.`);
             }
@@ -605,8 +621,9 @@
                 if (qty === 0) delete col.collection[key];
                 else col.collection[key] = qty;
                 closeModal('card-qty-modal');
+                saveAndPushCloud();
                 refreshCurrentView();
-                showToast("Carte mise à jour !");
+                showToast("Carte mise à jour et enregistrée !");
             }
         }
 
@@ -653,8 +670,9 @@
                 if (status) user.collection[key] = 1;
                 else delete user.collection[key];
             });
+            saveAndPushCloud();
             refreshCurrentView();
-            showToast("Classeur mis à jour");
+            showToast("Classeur mis à jour et enregistré");
         }
 
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
@@ -667,6 +685,8 @@
 
         window.onload = function() {
             loadInitialState();
+            // Actualisation automatique toutes les 15 secondes pour voir les modifs des autres en direct
+            setInterval(syncWithCloud, 15000);
         }
     </script>
 </body>
