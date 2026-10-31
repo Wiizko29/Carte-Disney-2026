@@ -32,5 +32,15 @@
       },
       "createdBy": "user"
     }
+  ],
+  "requests": [
+    {
+      "id": "req_1793474561698",
+      "from": "Basile",
+      "to": "julie",
+      "cardKey": "P8",
+      "resolved": false,
+      "date": "31/10/2026"
+    }
   ]
 }
