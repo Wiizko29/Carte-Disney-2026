@@ -413,7 +413,7 @@
 
         let selectedColleagueIdForTab = null;
         let tempAvatarBase64 = null;
-        let lastLocalActionTime = 0; // Verrou anti-saut global
+        let lastLocalActionTime = 0;
 
         for (let i = 1; i <= 24; i++) {
             db.cards[`P${i}`] = { name: `Carte Premium #${i}`, image: `premium.png`, isPremium: true };
@@ -423,7 +423,6 @@
         }
 
         async function syncWithCloud() {
-            // Anti-saut : Si une action a été faite il y a moins de 25 secondes, on ignore la synchro
             if (Date.now() - lastLocalActionTime < 25000) return;
 
             try {
@@ -480,7 +479,7 @@
         }
 
         async function loadInitialState() {
-            if (localStorage.getItem('collabcards_dark'] === 'true') {
+            if (localStorage.getItem('collabcards_dark') === 'true') {
                 document.documentElement.classList.add('dark');
                 document.getElementById('theme-icon').className = "fa-solid fa-sun text-xs";
             }
@@ -714,7 +713,7 @@
         function saveProfileAvatar() {
             const user = getCurrentUser();
             if (user && tempAvatarBase64) {
-                lastLocalActionTime = Date.now(); // Verrou anti-saut activé
+                lastLocalActionTime = Date.now();
                 user.avatar = tempAvatarBase64;
                 saveAndPushCloud();
                 refreshCurrentView();
@@ -741,7 +740,7 @@
                 return;
             }
 
-            lastLocalActionTime = Date.now(); // Verrou anti-saut activé
+            lastLocalActionTime = Date.now();
             db.requests.push({
                 id: 'req_' + Date.now(),
                 from: currentUser.name,
@@ -850,7 +849,7 @@
         }
 
         function resolveRequest(reqId, ownerName, cardKey) {
-            lastLocalActionTime = Date.now(); // ACTIVÉ ICI EN PRIORITÉ ABSOLUE pour bloquer le re-téléchargement intempestif !
+            lastLocalActionTime = Date.now();
 
             if (!db.requests) return;
             const req = db.requests.find(r => r.id === reqId);
