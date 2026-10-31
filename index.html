@@ -209,7 +209,7 @@
                     <div class="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10 flex items-center gap-3">
                         <div>
                             <label class="block text-[10px] text-emerald-200 uppercase font-bold tracking-wider mb-1">Sélectionner un collègue :</label>
-                            <select id="colleague-selector" onchange="renderColleaguesCollectionTab()" class="py-2 px-3 bg-slate-900 text-white border border-slate-700 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <select id="colleague-selector" onchange="onColleagueSelectChange()" class="py-2 px-3 bg-slate-900 text-white border border-slate-700 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                             </select>
                         </div>
                         <div id="admin-delete-container" class="hidden self-end">
@@ -284,6 +284,9 @@
             cards: {}
         };
 
+        // Variable globale pour mémoriser le collègue sélectionné dans l'onglet équipe
+        let selectedColleagueIdForTab = null;
+
         for (let i = 1; i <= 12; i++) {
             db.cards[`P${i}`] = { name: `Carte Premium #${i}`, image: `premium.png`, isPremium: true };
         }
@@ -339,7 +342,7 @@
         }
 
         async function loadInitialState() {
-            if (localStorage.getItem('collabcards_dark') === 'true') {
+            if (localStorage.getItem('collabcards_dark'] === 'true') {
                 document.documentElement.classList.add('dark');
                 document.getElementById('theme-icon').className = "fa-solid fa-sun text-xs";
             }
@@ -371,6 +374,10 @@
                 }
                 db.currentUserName = found.name;
                 localStorage.setItem('collabcards_active_username', db.currentUserName);
+                
+                // Initialiser par défaut l'onglet équipe sur le compte connecté
+                selectedColleagueIdForTab = found.id;
+
                 document.getElementById('welcome-modal').classList.add('hidden');
                 refreshCurrentView();
             } else {
@@ -379,7 +386,7 @@
         }
 
         function registerFirstUser() {
-            const name = document.getElementById('welcome-name-input').value.trim();
+            const name = document.getElementById('welcome-name-input'].value.trim();
             if (!name) { alert("Entre ton pseudo."); return; }
             const isBasile = name.toLowerCase() === "basile";
 
@@ -402,6 +409,8 @@
             }
 
             localStorage.setItem('collabcards_active_username', db.currentUserName);
+            selectedColleagueIdForTab = getCurrentUser().id;
+
             const newUrl = window.location.pathname + '?user=' + encodeURIComponent(db.currentUserName);
             window.history.replaceState({}, '', newUrl);
 
@@ -414,7 +423,8 @@
             localStorage.removeItem('collabcards_active_username');
             window.history.replaceState({}, '', window.location.pathname);
             db.currentUserName = null;
-            document.getElementById('welcome-name-input').value = '';
+            selectedColleagueIdForTab = null;
+            document.getElementById('welcome-name-input'].value = '';
             document.getElementById('welcome-modal').classList.remove('hidden');
             showToast("Déconnecté avec succès.");
         }
@@ -453,15 +463,6 @@
                 }
             });
             document.getElementById(`tab-${tab}`).classList.remove('hidden');
-
-            // Si on arrive sur l'onglet Équipe, on sélectionne par défaut le profil de l'utilisateur connecté
-            if (tab === 'colleagues') {
-                const currentUser = getCurrentUser();
-                const selector = document.getElementById('colleague-selector');
-                if (currentUser && selector) {
-                    selector.value = currentUser.id;
-                }
-            }
 
             refreshCurrentView();
         }
@@ -539,37 +540,46 @@
                 </div>`;
             });
             grid.innerHTML = html;
-            document.getElementById('my-owned-count').innerText = `${ownedCount} / 120`;
-            document.getElementById('my-missing-count').innerText = 120 - ownedCount;
+            document.getElementById('my-owned-count'].innerText = `${ownedCount} / 120`;
+            document.getElementById('my-missing-count'].innerText = 120 - ownedCount;
         }
 
-        let isInitializedColleaguesDropdown = false;
         function initColleaguesCollectionTab() {
             const selector = document.getElementById('colleague-selector');
             const currentUser = getCurrentUser();
             
-            selector.innerHTML = '';
-            db.colleagues.forEach(c => {
-                selector.innerHTML += `<option value="${c.id}">${c.name} ${c.id === currentUser.id ? '(Moi)' : ''}</option>`;
-            });
-
-            // Par défaut, si rien n'est sélectionné ou si on vient d'arriver, on met l'utilisateur connecté
-            if (!selector.value || !db.colleagues.some(c => c.id === selector.value)) {
-                selector.value = currentUser.id;
+            // Si aucune sélection n'est mémorisée, on prend l'utilisateur connecté par défaut
+            if (!selectedColleagueIdForTab || !db.colleagues.some(c => c.id === selectedColleagueIdForTab)) {
+                selectedColleagueIdForTab = currentUser.id;
             }
 
+            selector.innerHTML = '';
+            db.colleagues.forEach(c => {
+                const isMe = c.id === currentUser.id;
+                selector.innerHTML += `<option value="${c.id}">${c.name} ${isMe ? '(Moi)' : ''}</option>`;
+            });
+
+            // On applique la sélection mémorisée au menu déroulant
+            selector.value = selectedColleagueIdForTab;
+
+            renderColleaguesCollectionTab();
+        }
+
+        function onColleagueSelectChange() {
+            const selector = document.getElementById('colleague-selector');
+            selectedColleagueIdForTab = selector.value;
             renderColleaguesCollectionTab();
         }
 
         function renderColleaguesCollectionTab() {
             const selector = document.getElementById('colleague-selector');
-            const targetId = selector.value || getCurrentUser().id;
+            const targetId = selector.value || selectedColleagueIdForTab || getCurrentUser().id;
             const targetCol = db.colleagues.find(c => c.id === targetId) || getCurrentUser();
-            document.getElementById('colleague-banner-title').innerText = `Classeur de ${targetCol.name}`;
+            document.getElementById('colleague-banner-title'].innerText = `Classeur de ${targetCol.name}`;
             
             const grid = document.getElementById('colleague-cards-grid');
-            const search = document.getElementById('colleague-search').value.toLowerCase();
-            const filter = document.getElementById('colleague-filter').value;
+            const search = document.getElementById('colleague-search'].value.toLowerCase();
+            const filter = document.getElementById('colleague-filter'].value;
 
             let html = '';
             getAllKeys().forEach(key => {
@@ -613,6 +623,7 @@
 
             if (confirm(`Es-tu sûr de vouloir supprimer le profil de ${targetCol.name} ? Cette action est irréversible.`)) {
                 db.colleagues = db.colleagues.filter(c => c.id !== targetId);
+                selectedColleagueIdForTab = getCurrentUser().id;
                 saveAndPushCloud();
                 refreshCurrentView();
                 showToast(`Profil de ${targetCol.name} supprimé.`);
@@ -628,10 +639,10 @@
                 return;
             }
 
-            document.getElementById('modal-target-colid').value = colId;
-            document.getElementById('modal-card-key').value = key;
-            document.getElementById('modal-qty-input').value = targetCol.collection[key] || 0;
-            document.getElementById('modal-card-title').innerText = db.cards[key].name;
+            document.getElementById('modal-target-colid'].value = colId;
+            document.getElementById('modal-card-key'].value = key;
+            document.getElementById('modal-qty-input'].value = targetCol.collection[key] || 0;
+            document.getElementById('modal-card-title'].innerText = db.cards[key].name;
             
             const badge = document.getElementById('modal-card-badge');
             const card = db.cards[key];
@@ -643,7 +654,7 @@
                 badge.innerText = `Carte Normale #${key}`;
             }
 
-            document.getElementById('card-qty-modal').classList.remove('hidden');
+            document.getElementById('card-qty-modal'].classList.remove('hidden');
         }
 
         function adjustModalQty(delta) {
@@ -652,12 +663,12 @@
             if (val < 0) val = 0;
             input.value = val;
         }
-        function setModalQty(val) { document.getElementById('modal-qty-input').value = val; }
+        function setModalQty(val) { document.getElementById('modal-qty-input'].value = val; }
 
         function saveModalQty() {
-            const colId = document.getElementById('modal-target-colid').value;
-            const key = document.getElementById('modal-card-key').value;
-            const qty = parseInt(document.getElementById('modal-qty-input').value) || 0;
+            const colId = document.getElementById('modal-target-colid'].value;
+            const key = document.getElementById('modal-card-key'].value;
+            const qty = parseInt(document.getElementById('modal-qty-input'].value) || 0;
             const col = db.colleagues.find(c => c.id === colId);
             
             if (col) {
@@ -672,7 +683,7 @@
 
         function renderMatrixTable() {
             const table = document.getElementById('matrix-table');
-            const searchVal = document.getElementById('exchange-search').value.toLowerCase().trim();
+            const searchVal = document.getElementById('exchange-search'].value.toLowerCase().trim();
 
             let html = `<thead><tr class="bg-slate-100 dark:bg-slate-950 text-[11px] font-bold text-slate-500 uppercase"><th class="p-3.5">Carte (Doublons)</th>`;
             db.colleagues.forEach(c => { html += `<th class="p-3.5 text-center">${c.avatar} ${c.name}</th>`; });
@@ -721,14 +732,14 @@
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
         function showToast(text) {
             const t = document.getElementById('toast');
-            document.getElementById('toast-text').innerText = text;
+            document.getElementById('toast-text'].innerText = text;
             t.classList.remove('translate-y-20', 'opacity-0');
             setTimeout(() => t.classList.add('translate-y-20', 'opacity-0'), 3000);
         }
 
         window.onload = function() {
             loadInitialState();
-            setInterval(syncWithCloud, 5000); // Réduit à 5 secondes comme demandé
+            setInterval(syncWithCloud, 5000);
         }
     </script>
 </body>
