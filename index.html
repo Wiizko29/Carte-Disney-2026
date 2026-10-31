@@ -77,7 +77,7 @@
         </div>
     </div>
 
-    <!-- MODAL GÉRER MON PROFIL (AVATAR PHOTO) -->
+    <!-- MODAL GÉRER MON PROFIL -->
     <div id="profile-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6 text-center">
             <div class="flex items-center justify-between">
@@ -104,8 +104,9 @@
     <!-- HEADER -->
     <header class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div id="header-avatar-container" class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30 text-lg font-extrabold overflow-hidden">
+            <div class="flex items-center space-x-3.5">
+                <!-- Avatar agrandi dans l'en-tête -->
+                <div id="header-avatar-container" class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30 text-xl font-extrabold overflow-hidden border-2 border-emerald-400/50">
                     <span id="header-avatar-emoji">👑</span>
                     <img id="header-avatar-img" src="" class="w-full h-full object-cover hidden">
                 </div>
@@ -181,6 +182,7 @@
                 </div>
             </div>
 
+            <!-- Filtres et Mode d'affichage -->
             <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                 <div class="flex items-center space-x-3 w-full sm:w-auto flex-wrap gap-y-2">
                     <div class="relative flex-1 sm:w-64">
@@ -196,13 +198,23 @@
                         <option value="normal">Uniquement Normales (1-108)</option>
                     </select>
                 </div>
-                <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                <!-- Sélecteur de mode d'affichage -->
+                <div class="flex items-center space-x-3 w-full sm:w-auto justify-end">
+                    <div class="flex items-center space-x-2">
+                        <label class="text-xs font-bold text-slate-500">Affichage :</label>
+                        <select id="my-layout" onchange="renderMyCollection()" class="py-2 px-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <option value="grid-5">Grille Standard (5 colonnes)</option>
+                            <option value="grid-3">Grille Large (3 colonnes)</option>
+                            <option value="grid-2">Grille Zoomée (2 colonnes)</option>
+                            <option value="list">Mode Liste (Compact)</option>
+                        </select>
+                    </div>
                     <button onclick="myBulkSet(true)" class="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-bold rounded-xl">Tout cocher</button>
                     <button onclick="myBulkSet(false)" class="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-bold rounded-xl">Tout vider</button>
                 </div>
             </div>
 
-            <div id="my-cards-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+            <div id="my-cards-container"></div>
         </section>
 
         <!-- TAB 2 -->
@@ -263,6 +275,7 @@
                 </div>
             </div>
 
+            <!-- Filtres et Mode d'affichage pour l'équipe -->
             <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                 <div class="flex items-center space-x-3 w-full sm:w-auto flex-wrap gap-y-2">
                     <div class="relative flex-1 sm:w-64">
@@ -278,9 +291,18 @@
                         <option value="normal">Uniquement Normales (1-108)</option>
                     </select>
                 </div>
+                <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                    <label class="text-xs font-bold text-slate-500">Affichage :</label>
+                    <select id="colleague-layout" onchange="renderColleaguesCollectionTab()" class="py-2 px-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <option value="grid-5">Grille Standard (5 colonnes)</option>
+                        <option value="grid-3">Grille Large (3 colonnes)</option>
+                        <option value="grid-2">Grille Zoomée (2 colonnes)</option>
+                        <option value="list">Mode Liste (Compact)</option>
+                    </select>
+                </div>
             </div>
 
-            <div id="colleague-cards-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+            <div id="colleague-cards-container"></div>
         </section>
     </main>
 
@@ -514,7 +536,6 @@
             document.getElementById('header-user-name').innerText = user.name + (isAdmin() ? " (Admin 👑)" : "");
             document.getElementById('mycollection-title').innerText = `Classeur de ${user.name}`;
 
-            // Affichage de l'avatar utilisateur dans l'en-tête (Emoji ou Photo)
             const emojiEl = document.getElementById('header-avatar-emoji');
             const imgEl = document.getElementById('header-avatar-img');
             if (user.avatar && user.avatar.startsWith('data:image')) {
@@ -574,7 +595,6 @@
             document.getElementById('profile-modal').classList.remove('hidden');
         }
 
-        // Redimensionnement automatique de l'image en carré 100x100 pixels
         function previewAvatarImage(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -584,7 +604,7 @@
                 const img = new Image();
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    const MAX_SIZE = 100;
+                    const MAX_SIZE = 120;
                     let width = img.width;
                     let height = img.height;
 
@@ -598,14 +618,13 @@
                     canvas.height = MAX_SIZE;
                     const ctx = canvas.getContext('2d');
                     
-                    // Centrer et dessiner en carré
                     let x = (MAX_SIZE - width) / 2;
                     let y = (MAX_SIZE - height) / 2;
                     ctx.fillStyle = "#1e293b";
                     ctx.fillRect(0, 0, MAX_SIZE, MAX_SIZE);
                     ctx.drawImage(img, x, y, width, height);
 
-                    tempAvatarBase64 = canvas.toDataURL('image/jpeg', 0.8);
+                    tempAvatarBase64 = canvas.toDataURL('image/jpeg', 0.85);
                     
                     document.getElementById('profile-modal-avatar-preview').src = tempAvatarBase64;
                     document.getElementById('profile-modal-avatar-preview').classList.remove('hidden');
@@ -628,17 +647,20 @@
             }
         }
 
-        function renderMyCollection() {
-            const user = getCurrentUser();
-            const grid = document.getElementById('my-cards-grid');
-            const search = document.getElementById('my-search').value.toLowerCase();
-            const filter = document.getElementById('my-filter').value;
+        // Fonction universelle pour générer l'affichage des cartes (Grilles ou Liste)
+        function generateCardsHTML(targetCol, searchId, filterId, layoutId, containerId, countOwnedId, countMissingId) {
+            const container = document.getElementById(containerId);
+            const search = document.getElementById(searchId).value.toLowerCase();
+            const filter = document.getElementById(filterId).value;
+            const layout = document.getElementById(layoutId).value;
 
-            let ownedCount = 0, html = '';
+            let ownedCount = 0;
+            let cardsToRender = [];
+
             getAllKeys().forEach(key => {
                 const card = db.cards[key];
                 if (!card) return;
-                const qty = user.collection[key] || 0;
+                const qty = targetCol.collection[key] || 0;
                 const isOwned = qty > 0;
                 if (isOwned) ownedCount++;
 
@@ -648,27 +670,79 @@
                 if (filter === 'premium' && !card.isPremium) return;
                 if (filter === 'normal' && card.isPremium) return;
 
-                let cardStyle = "";
-                if (card.isPremium) {
-                    cardStyle = isOwned ? "card-premium-owned-glow" : "card-missing bg-amber-500/5";
-                } else {
-                    cardStyle = isOwned ? "card-owned-glow bg-white dark:bg-slate-900" : "card-missing bg-white dark:bg-slate-900";
-                }
-                
-                html += `<div onclick="openQtyModal('${user.id}', '${key}')" class="${cardStyle} rounded-2xl p-3 border border-slate-200 dark:border-slate-800 flex flex-col justify-between cursor-pointer select-none transition-all">
-                    <div>
-                        <div class="relative aspect-[3/4] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-950 mb-2 border border-slate-200 dark:border-slate-800">
-                            <img src="${card.image}" class="w-full h-full object-cover">
-                            <span class="absolute top-2 left-2 ${card.isPremium ? 'card-premium-badge text-white font-bold' : 'bg-slate-900/80 text-white'} text-[10px] px-2 py-0.5 rounded-md">${card.isPremium ? '✨ P' + key : '#' + key}</span>
-                            ${qty > 0 ? `<span class="absolute top-2 right-2 bg-indigo-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">${qty} ex.</span>` : ''}
-                        </div>
-                        <h4 class="font-bold text-xs truncate">${card.name}</h4>
-                    </div>
-                </div>`;
+                cardsToRender.push({ key, card, qty, isOwned });
             });
-            grid.innerHTML = html;
-            document.getElementById('my-owned-count').innerText = `${ownedCount} / 132`;
-            document.getElementById('my-missing-count').innerText = 132 - ownedCount;
+
+            if (countOwnedId) document.getElementById(countOwnedId).innerText = `${ownedCount} / 132`;
+            if (countMissingId) document.getElementById(countMissingId).innerText = 132 - ownedCount;
+
+            if (cardsToRender.length === 0) {
+                container.innerHTML = `<div class="col-span-full p-8 text-center text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">Aucune carte trouvée.</div>`;
+                return;
+            }
+
+            let html = '';
+
+            if (layout === 'list') {
+                // Mode Liste Compacte
+                html = `<div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-slate-800">`;
+                cardsToRender.forEach(({ key, card, qty, isOwned }) => {
+                    let badgeClass = card.isPremium ? "card-premium-badge text-white" : "bg-slate-900 text-white";
+                    html += `<div onclick="openQtyModal('${targetCol.id}', '${key}')" class="flex items-center justify-between p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-12 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-950 flex-shrink-0 border border-slate-200 dark:border-slate-800">
+                                <img src="${card.image}" class="w-full h-full object-cover">
+                            </div>
+                            <div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="${badgeClass} text-[10px] font-bold px-2 py-0.5 rounded-md">${card.isPremium ? '✨ P' + key : '#' + key}</span>
+                                    <h4 class="font-bold text-xs">${card.name}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <span class="text-xs font-bold px-2.5 py-1 rounded-full ${isOwned ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}">
+                                ${isOwned ? qty + ' ex. possédés' : 'Manquante'}
+                            </span>
+                        </div>
+                    </div>`;
+                });
+                html += `</div>`;
+            } else {
+                // Modes Grille (grid-5, grid-3, grid-2)
+                let gridColsClass = "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5";
+                if (layout === 'grid-3') gridColsClass = "grid-cols-1 sm:grid-cols-2 md:grid-cols-3";
+                if (layout === 'grid-2') gridColsClass = "grid-cols-1 sm:grid-cols-2";
+
+                html = `<div class="grid ${gridColsClass} gap-4">`;
+                cardsToRender.forEach(({ key, card, qty, isOwned }) => {
+                    let cardStyle = "";
+                    if (card.isPremium) {
+                        cardStyle = isOwned ? "card-premium-owned-glow" : "card-missing bg-amber-500/5";
+                    } else {
+                        cardStyle = isOwned ? "card-owned-glow bg-white dark:bg-slate-900" : "card-missing bg-white dark:bg-slate-900";
+                    }
+
+                    html += `<div onclick="openQtyModal('${targetCol.id}', '${key}')" class="${cardStyle} rounded-2xl p-3 border border-slate-200 dark:border-slate-800 flex flex-col justify-between cursor-pointer select-none transition-all">
+                        <div>
+                            <div class="relative aspect-[3/4] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-950 mb-2 border border-slate-200 dark:border-slate-800">
+                                <img src="${card.image}" class="w-full h-full object-cover">
+                                <span class="absolute top-2 left-2 ${card.isPremium ? 'card-premium-badge text-white font-bold' : 'bg-slate-900/80 text-white'} text-[10px] px-2 py-0.5 rounded-md">${card.isPremium ? '✨ P' + key : '#' + key}</span>
+                                ${qty > 0 ? `<span class="absolute top-2 right-2 bg-indigo-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">${qty} ex.</span>` : ''}
+                            </div>
+                            <h4 class="font-bold text-xs truncate">${card.name}</h4>
+                        </div>
+                    </div>`;
+                });
+                html += `</div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function renderMyCollection() {
+            const user = getCurrentUser();
+            generateCardsHTML(user, 'my-search', 'my-filter', 'my-layout', 'my-cards-container', 'my-owned-count', 'my-missing-count');
         }
 
         function initColleaguesCollectionTab() {
@@ -702,38 +776,7 @@
             const targetCol = db.colleagues.find(c => c.id === targetId) || getCurrentUser();
             document.getElementById('colleague-banner-title').innerText = `Classeur de ${targetCol.name}`;
             
-            const grid = document.getElementById('colleague-cards-grid');
-            const search = document.getElementById('colleague-search').value.toLowerCase();
-            const filter = document.getElementById('colleague-filter').value;
-
-            let ownedCount = 0, html = '';
-            getAllKeys().forEach(key => {
-                const card = db.cards[key];
-                if (!card) return;
-                const qty = targetCol.collection[key] || 0;
-                const isOwned = qty > 0;
-                if (isOwned) ownedCount++;
-
-                if (search && !key.toLowerCase().includes(search) && !card.name.toLowerCase().includes(search)) return;
-                if (filter === 'owned' && !isOwned) return;
-                if (filter === 'missing' && isOwned) return;
-                if (filter === 'premium' && !card.isPremium) return;
-                if (filter === 'normal' && card.isPremium) return;
-
-                let cardStyle = isOwned ? (card.isPremium ? "card-premium-owned-glow" : "card-owned-glow bg-white dark:bg-slate-900") : "card-missing bg-white dark:bg-slate-900";
-
-                html += `<div onclick="openQtyModal('${targetCol.id}', '${key}')" class="${cardStyle} rounded-2xl p-3 border border-slate-200 dark:border-slate-800 cursor-pointer transition-all">
-                    <div class="relative aspect-[3/4] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-950 mb-2 border border-slate-200 dark:border-slate-800">
-                        <img src="${card.image}" class="w-full h-full object-cover">
-                        <span class="absolute top-2 left-2 ${card.isPremium ? 'card-premium-badge text-white font-bold' : 'bg-slate-900/80 text-white'} text-[10px] px-2 py-0.5 rounded-md">${card.isPremium ? '✨ P' + key : '#' + key}</span>
-                        ${qty > 0 ? `<span class="absolute top-2 right-2 bg-indigo-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">${qty} ex.</span>` : ''}
-                    </div>
-                    <h4 class="font-bold text-xs truncate">${card.name}</h4>
-                </div>`;
-            });
-            grid.innerHTML = html;
-            document.getElementById('colleague-owned-count').innerText = `${ownedCount} / 132`;
-            document.getElementById('colleague-missing-count').innerText = 132 - ownedCount;
+            generateCardsHTML(targetCol, 'colleague-search', 'colleague-filter', 'colleague-layout', 'colleague-cards-container', 'colleague-owned-count', 'colleague-missing-count');
         }
 
         function deleteSelectedColleague() {
@@ -813,15 +856,16 @@
             const table = document.getElementById('matrix-table');
             const searchVal = document.getElementById('exchange-search').value.toLowerCase().trim();
 
-            let html = `<thead><tr class="bg-slate-100 dark:bg-slate-950 text-[11px] font-bold text-slate-500 uppercase"><th class="p-3.5">Carte (Doublons)</th>`;
+            let html = `<thead><tr class="bg-slate-100 dark:bg-slate-950 text-[11px] font-bold text-slate-500 uppercase"><th class="p-4">Carte (Doublons)</th>`;
             db.colleagues.forEach(c => { 
                 let avatarHtml = '';
+                // Avatar agrandi dans le tableau des échanges (taille w-9 h-9)
                 if (c.avatar && c.avatar.startsWith('data:image')) {
-                    avatarHtml = `<img src="${c.avatar}" class="w-5 h-5 rounded-full object-cover inline-block mr-1 align-middle">`;
+                    avatarHtml = `<img src="${c.avatar}" class="w-9 h-9 rounded-full object-cover inline-block mr-2 align-middle border border-emerald-500/50 shadow-sm">`;
                 } else {
-                    avatarHtml = `<span class="mr-1">${c.avatar || '😎'}</span>`;
+                    avatarHtml = `<span class="mr-2 text-base align-middle">${c.avatar || '😎'}</span>`;
                 }
-                html += `<th class="p-3.5 text-center">${avatarHtml} ${c.name}</th>`; 
+                html += `<th class="p-4 text-center">${avatarHtml} <span class="align-middle">${c.name}</span></th>`; 
             });
             html += `</tr></thead><tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">`;
 
@@ -839,16 +883,16 @@
                 }
 
                 foundAny = true;
-                html += `<tr><td class="p-3.5 font-bold">${card.name}</td>`;
+                html += `<tr><td class="p-4 font-bold flex items-center space-x-3"><div class="w-8 h-10 rounded overflow-hidden bg-slate-100 dark:bg-slate-950 flex-shrink-0"><img src="${card.image}" class="w-full h-full object-cover"></div><span>${card.name}</span></td>`;
                 db.colleagues.forEach(c => {
                     let qty = c.collection[key] || 0;
-                    html += `<td class="p-3.5 text-center"><span onclick="openQtyModal('${c.id}', '${key}')" class="px-2 py-1 rounded bg-indigo-600 text-white cursor-pointer font-bold shadow-sm">${qty > 1 ? qty + ' ex.' : '-'}</span></td>`;
+                    html += `<td class="p-4 text-center"><span onclick="openQtyModal('${c.id}', '${key}')" class="px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white cursor-pointer font-bold shadow-sm inline-block">${qty > 1 ? qty + ' ex.' : '-'}</span></td>`;
                 });
                 html += `</tr>`;
             });
 
             if (!foundAny) {
-                html += `<tr><td colspan="${db.colleagues.length + 1}" class="p-6 text-center text-slate-400">Aucun doublon trouvé pour cette recherche.</td></tr>`;
+                html += `<tr><td colspan="${db.colleagues.length + 1}" class="p-8 text-center text-slate-400">Aucun doublon trouvé pour cette recherche.</td></tr>`;
             }
 
             table.innerHTML = html + `</tbody>`;
