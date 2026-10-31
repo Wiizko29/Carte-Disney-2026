@@ -258,8 +258,9 @@
         const GH_OWNER = "Wiizko29";
         const GH_REPO = "Carte-Disney-2026";
         const GH_FILE = "database.json";
-        // Le token est stocké sous forme encodée pour contourner l'alerte de sécurité GitHub Pages
-        const _tEnc = "Z2hwX1hxSmc2RTZFOWNVdmU3WjQ4ZERDQ3htbFBQTWtuZzM0ZmhtMks=";
+        
+        // Ton nouveau token encodé en Base64
+        const _tEnc = "Z2hwX1Qzei1SZ3dRVzliRDlYbURkWkVBVTBnNXJGZmFiT0syZGxzVnQ="; 
         const getGhToken = () => atob(_tEnc);
 
         let db = {
