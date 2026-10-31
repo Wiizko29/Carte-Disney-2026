@@ -276,6 +276,7 @@
         let saveTimeout = null;
 
         // Enregistrement instantané en ligne avec protection anti-spam (uniquement sur action)
+        // Enregistrement vers le Cloud avec les bons en-têtes CORS
         function saveAndPushCloud() {
             if (isUpdating) return;
 
@@ -283,10 +284,16 @@
             saveTimeout = setTimeout(() => {
                 fetch(STORAGE_URL, {
                     method: 'PUT',
-                    headers: { 'Type-Content': 'application/json', 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json' 
+                    },
                     body: JSON.stringify({ colleagues: db.colleagues })
-                }).catch(err => console.error("Erreur sync cloud:", err));
-            }, 800);
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error("Erreur réseau du serveur");
+                })
+                .catch(err => console.error("Erreur sync cloud:", err));
+            }, 500);
         }
 
         // Synchronisation manuelle ou lors des changements d'onglets (plus de boucle agressive setInterval)
