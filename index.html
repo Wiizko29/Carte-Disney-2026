@@ -255,10 +255,10 @@
 
     <script>
         // CONFIGURATION GITHUB API
-        const GH_OWNER = "Wiizko29";
+        const GH_OWNER = "Wiizko29"; // Corrigé avec deux "i"
         const GH_REPO = "Carte-Disney-2026";
         const GH_FILE = "database.json";
-        const GH_TOKEN = "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"; // Ton jeton GitHub
+        const GH_TOKEN = "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";
 
         let db = {
             currentUserName: null,
@@ -277,7 +277,7 @@
 
         let isUpdating = false;
         let saveTimeout = null;
-        let fileSha = null; // Nécessaire pour mettre à jour un fichier sur l'API GitHub
+        let fileSha = null;
 
         // Sauvegarde sur GitHub (Commit automatique du fichier database.json)
         async function saveAndPushCloud() {
@@ -288,9 +288,9 @@
                 try {
                     const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
                     
-                    // 1. On récupère d'abord le SHA actuel du fichier (requis par l'API GitHub pour écraser/mettre à jour)
+                    // 1. On récupère d'abord le SHA actuel du fichier
                     const getRes = await fetch(apiUrl, {
-                        headers: { 'Authorization': `token ${GH_TOKEN}` }
+                        headers: { 'Authorization': `Bearer ${GH_TOKEN}` }
                     });
                     if (getRes.ok) {
                         const fileData = await getRes.json();
@@ -303,7 +303,7 @@
                     await fetch(apiUrl, {
                         method: 'PUT',
                         headers: {
-                            'Authorization': `token ${GH_TOKEN}`,
+                            'Authorization': `Bearer ${GH_TOKEN}`,
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
@@ -324,7 +324,7 @@
             try {
                 const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
                 const response = await fetch(apiUrl, {
-                    headers: { 'Authorization': `token ${GH_TOKEN}` }
+                    headers: { 'Authorization': `Bearer ${GH_TOKEN}` }
                 });
                 if (!response.ok) return;
                 const fileData = await response.json();
