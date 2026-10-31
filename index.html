@@ -51,7 +51,6 @@
             background: linear-gradient(135deg, rgba(254, 243, 199, 0.1) 0%, rgba(245, 158, 11, 0.15) 100%);
             opacity: 1 !important;
         }
-        /* Mode jour amélioré pour les cartes manquantes : plus contrasté et lisible */
         .card-missing {
             opacity: 0.65;
             filter: grayscale(40%);
@@ -109,7 +108,7 @@
         </div>
     </div>
 
-    <!-- MODAL ZOOM CARTE (ONGLET ÉCHANGE) -->
+    <!-- MODAL ZOOM CARTE -->
     <div id="card-zoom-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 text-center">
             <div class="flex items-center justify-between">
@@ -142,8 +141,9 @@
                 <button onclick="switchTab('mycollection')" id="nav-mycollection" class="px-4 py-2 rounded-xl text-xs font-bold transition-all bg-emerald-600 text-white shadow-md shadow-emerald-600/20">
                     <i class="fa-solid fa-book-open mr-1.5"></i> Mon Classeur
                 </button>
-                <button onclick="switchTab('exchanges')" id="nav-exchanges" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white">
+                <button onclick="switchTab('exchanges')" id="nav-exchanges" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white relative">
                     <i class="fa-solid fa-handshake mr-1.5"></i> Échanges & Doublons
+                    <span id="exchange-badge-count" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full shadow">0</span>
                 </button>
                 <button onclick="switchTab('colleagues')" id="nav-colleagues" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white">
                     <i class="fa-solid fa-users mr-1.5"></i> Équipe
@@ -180,6 +180,15 @@
 
     <!-- MAIN -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- ZONE DE NOTIFICATIONS / DEMANDES REÇUES -->
+        <div id="notifications-banner" class="hidden bg-gradient-to-r from-amber-500 to-orange-600 rounded-3xl p-5 text-white shadow-lg space-y-3">
+            <div class="flex items-center space-x-2 text-sm font-extrabold">
+                <i class="fa-solid fa-bell animate-bounce"></i>
+                <span>Demandes d'échange reçues de tes collègues :</span>
+            </div>
+            <div id="notifications-list" class="space-y-2"></div>
+        </div>
 
         <!-- TAB 1 -->
         <section id="tab-mycollection" class="space-y-6">
@@ -237,12 +246,12 @@
             <div id="my-cards-container"></div>
         </section>
 
-        <!-- TAB 2 : ÉCHANGES (Amélioré et plus lisible) -->
+        <!-- TAB 2 : ÉCHANGES -->
         <section id="tab-exchanges" class="hidden space-y-6">
             <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-2xl font-extrabold tracking-tight">Bourse aux Doublons de l'Équipe</h2>
-                    <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">Retrouvez les doublons de chaque collègue. Cliquez sur une carte pour l'agrandir.</p>
+                    <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">Retrouvez les doublons de chaque collègue. Cliquez sur une carte pour l'agrandir ou demandez un doublon !</p>
                 </div>
             </div>
 
@@ -253,7 +262,6 @@
                 </div>
             </div>
 
-            <!-- Grille / Cartes des doublons modernisée pour une lecture ultra claire -->
             <div id="exchanges-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
         </section>
 
@@ -360,6 +368,7 @@
             colleagues: [
                 { id: "col_basile", name: "Basile", avatar: "👑", collection: {}, createdBy: "admin" }
             ],
+            requests: [], // Tableau partagé pour les demandes d'échange
             cards: {}
         };
 
@@ -379,19 +388,25 @@
                 if (!response.ok) return;
                 const remoteData = await response.json();
 
-                if (remoteData && remoteData.colleagues && remoteData.colleagues.length > 0) {
-                    let mergedColleagues = [...db.colleagues];
-                    remoteData.colleagues.forEach(remoteCol => {
-                        let existing = mergedColleagues.find(c => c.name.toLowerCase() === remoteCol.name.toLowerCase());
-                        if (!existing) {
-                            mergedColleagues.push(remoteCol);
-                        } else {
-                            existing.collection = remoteCol.collection;
-                            if (remoteCol.avatar) existing.avatar = remoteCol.avatar;
-                        }
-                    });
-                    db.colleagues = mergedColleagues;
+                if (remoteData) {
+                    if (remoteData.colleagues && remoteData.colleagues.length > 0) {
+                        let mergedColleagues = [...db.colleagues];
+                        remoteData.colleagues.forEach(remoteCol => {
+                            let existing = mergedColleagues.find(c => c.name.toLowerCase() === remoteCol.name.toLowerCase());
+                            if (!existing) {
+                                mergedColleagues.push(remoteCol);
+                            } else {
+                                existing.collection = remoteCol.collection;
+                                if (remoteCol.avatar) existing.avatar = remoteCol.avatar;
+                            }
+                        });
+                        db.colleagues = mergedColleagues;
+                    }
+                    if (remoteData.requests) {
+                        db.requests = remoteData.requests;
+                    }
                     refreshCurrentView();
+                    updateNotificationsBanner();
                 }
             } catch(e) {}
         }
@@ -401,7 +416,7 @@
                 const response = await fetch(WORKER_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ data: { colleagues: db.colleagues } })
+                    body: JSON.stringify({ data: { colleagues: db.colleagues, requests: db.requests } })
                 });
                 const resJson = await response.json();
                 if (!resJson.success) {
@@ -663,7 +678,89 @@
             }
         }
 
-        // Fonction pour afficher une carte en grand dans l'onglet Échange
+        // Fonction pour envoyer une demande d'échange à un collègue
+        function requestDuplicate(ownerName, cardKey) {
+            const currentUser = getCurrentUser();
+            if (!currentUser) return;
+
+            if (currentUser.name.toLowerCase() === ownerName.toLowerCase()) {
+                showToast("Tu ne peux pas te demander un doublon à toi-même !");
+                return;
+            }
+
+            if (!db.requests) db.requests = [];
+
+            // Vérifier si la demande existe déjà
+            const exists = db.requests.some(r => r.from === currentUser.name && r.to === ownerName && r.cardKey === cardKey && !r.resolved);
+            if (exists) {
+                showToast("Tu as déjà envoyé une demande pour cette carte à ce collègue.");
+                return;
+            }
+
+            db.requests.push({
+                id: 'req_' + Date.now(),
+                from: currentUser.name,
+                to: ownerName,
+                cardKey: cardKey,
+                resolved: false,
+                date: new Date().toLocaleDateString()
+            });
+
+            saveAndPushCloud();
+            showToast(`Demande envoyée à ${ownerName} avec succès ! 🚀`);
+            updateNotificationsBanner();
+        }
+
+        // Gestion de l'affichage des notifications reçues
+        function updateNotificationsBanner() {
+            const currentUser = getCurrentUser();
+            if (!currentUser) return;
+
+            const banner = document.getElementById('notifications-banner');
+            const list = document.getElementById('notifications-list');
+            const badge = document.getElementById('exchange-badge-count');
+
+            if (!db.requests) db.requests = [];
+
+            // Filtrer les demandes reçues par le user connecté et non résolues
+            const myRequests = db.requests.filter(r => r.to.toLowerCase() === currentUser.name.toLowerCase() && !r.resolved);
+
+            if (myRequests.length > 0) {
+                badge.innerText = myRequests.length;
+                badge.classList.remove('hidden');
+                banner.classList.remove('hidden');
+
+                let html = '';
+                myRequests.forEach(req => {
+                    const card = db.cards[req.cardKey];
+                    const cardName = card ? card.name : `Carte #${req.cardKey}`;
+                    html += `<div class="bg-white/10 backdrop-blur-md p-3 rounded-2xl flex items-center justify-between gap-4 text-xs">
+                        <div>
+                            <strong>${req.from}</strong> aimerait récupérer ton doublon de <strong>${cardName}</strong> (${req.cardKey === 'P' ? 'Premium' : '#' + req.cardKey}).
+                        </div>
+                        <button onclick="resolveRequest('${req.id}')" class="px-3 py-1.5 bg-white text-orange-600 font-bold rounded-xl hover:bg-orange-50 transition shadow-sm flex-shrink-0">
+                            C'est fait / OK 👍
+                        </button>
+                    </div>`;
+                });
+                list.innerHTML = html;
+            } else {
+                badge.classList.add('hidden');
+                banner.classList.add('hidden');
+            }
+        }
+
+        function resolveRequest(reqId) {
+            if (!db.requests) return;
+            const req = db.requests.find(r => r.id === reqId);
+            if (req) {
+                req.resolved = true;
+                saveAndPushCloud();
+                updateNotificationsBanner();
+                showToast("Demande marquée comme résolue !");
+            }
+        }
+
         function zoomCard(key) {
             const card = db.cards[key];
             if (!card) return;
@@ -884,7 +981,7 @@
             }
         }
 
-        // Refonte de l'onglet Échanges sous forme de cartes / blocs cliquables ultra lisibles
+        // Rendu de l'onglet Échanges avec le bouton de demande intégré dans chaque encadré
         function renderMatrixTable() {
             const container = document.getElementById('exchanges-cards-container');
             const searchVal = document.getElementById('exchange-search').value.toLowerCase().trim();
@@ -907,7 +1004,6 @@
                 let badgeClass = card.isPremium ? "card-premium-badge text-white" : "bg-slate-900 text-white";
 
                 html += `<div class="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center space-x-4">
-                    <!-- Image de la carte cliquable pour zoomer -->
                     <div onclick="zoomCard('${key}')" class="w-20 h-24 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-950 flex-shrink-0 border border-slate-200 dark:border-slate-800 cursor-pointer shadow-inner relative group">
                         <img src="${card.image}" class="w-full h-full object-cover group-hover:scale-105 transition">
                         <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs">
@@ -920,23 +1016,29 @@
                             <span class="${badgeClass} text-[10px] font-bold px-2 py-0.5 rounded-md">${card.isPremium ? '✨ P' + key : '#' + key}</span>
                             <h4 onclick="zoomCard('${key}')" class="font-extrabold text-sm truncate cursor-pointer hover:text-emerald-500 transition">${card.name}</h4>
                         </div>
-                        <p class="text-[11px] text-slate-400 mb-3">Doublons disponibles chez :</p>
+                        <p class="text-[11px] text-slate-400 mb-2">Doublons disponibles :</p>
                         
-                        <div class="flex flex-wrap gap-2">`;
+                        <div class="space-y-2">`;
 
                 db.colleagues.forEach(c => {
                     let qty = c.collection[key] || 0;
                     if (qty > 1) {
                         let avatarHtml = '';
                         if (c.avatar && c.avatar.startsWith('data:image')) {
-                            avatarHtml = `<img src="${c.avatar}" class="w-6 h-6 rounded-full object-cover border border-emerald-500 shadow-sm">`;
+                            avatarHtml = `<img src="${c.avatar}" class="w-5 h-5 rounded-full object-cover border border-emerald-500">`;
                         } else {
-                            avatarHtml = `<span class="text-sm">${c.avatar || '😎'}</span>`;
+                            avatarHtml = `<span class="text-xs">${c.avatar || '😎'}</span>`;
                         }
 
-                        html += `<div onclick="openQtyModal('${c.id}', '${key}')" class="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 text-indigo-700 dark:text-indigo-300 text-xs font-bold cursor-pointer hover:bg-indigo-100 transition" title="Modifier chez ${c.name}">
-                            ${avatarHtml}
-                            <span>${c.name} : <strong>${qty} ex.</strong></span>
+                        html += `<div class="flex items-center justify-between bg-slate-50 dark:bg-slate-950 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                            <div class="flex items-center space-x-2 cursor-pointer" onclick="openQtyModal('${c.id}', '${key}')" title="Voir le classeur">
+                                ${avatarHtml}
+                                <span class="text-xs font-bold">${c.name} <span class="text-indigo-600 dark:text-indigo-400">(${qty} ex.)</span></span>
+                            </div>
+                            <button onclick="requestDuplicate('${c.name}', '${key}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold rounded-lg shadow-sm transition flex items-center space-x-1" title="Demander ce doublon">
+                                <i class="fa-solid fa-paper-plane text-[10px]"></i>
+                                <span>Demander</span>
+                            </button>
                         </div>`;
                     }
                 });
