@@ -92,7 +92,6 @@
                 <button onclick="closeModal('profile-modal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
             </div>
 
-            <!-- Changement de photo -->
             <div class="flex flex-col items-center space-y-4 pb-6 border-b border-slate-100 dark:border-slate-800">
                 <div class="relative w-24 h-24 rounded-full overflow-hidden border-2 border-emerald-500 bg-slate-100 dark:bg-slate-800 flex items-center justify-center shadow-md">
                     <img id="profile-modal-avatar-preview" src="" class="w-full h-full object-cover hidden">
@@ -105,7 +104,6 @@
                 <button onclick="saveProfileAvatar()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md transition">Enregistrer la photo</button>
             </div>
 
-            <!-- Section demandes en attente dans le profil -->
             <div class="space-y-3 text-left">
                 <h4 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Demandes d'échange reçues :</h4>
                 <div id="profile-requests-list" class="space-y-2">
@@ -415,6 +413,7 @@
 
         let selectedColleagueIdForTab = null;
         let tempAvatarBase64 = null;
+        let lastLocalActionTime = 0; // Anti-saut : mémorise le moment de ta dernière action
 
         for (let i = 1; i <= 24; i++) {
             db.cards[`P${i}`] = { name: `Carte Premium #${i}`, image: `premium.png`, isPremium: true };
@@ -424,6 +423,10 @@
         }
 
         async function syncWithCloud() {
+            // Anti-saut : Si tu as fait une modification il y a moins de 25 secondes, 
+            // on ignore temporairement la synchro automatique pour ne pas écraser ton écran !
+            if (Date.now() - lastLocalActionTime < 25000) return;
+
             try {
                 const response = await fetch(`${GH_FILE}?t=${Date.now()}`);
                 if (!response.ok) return;
@@ -453,6 +456,7 @@
         }
 
         async function saveAndPushCloud() {
+            lastLocalActionTime = Date.now(); // On déclenche le verrou anti-saut ici
             try {
                 const response = await fetch(WORKER_URL, {
                     method: "POST",
@@ -665,9 +669,7 @@
             }
             document.getElementById('profile-avatar-file').value = '';
             
-            // Mettre à jour aussi la liste des demandes dans la modale profil
             updateProfileRequestsList();
-
             document.getElementById('profile-modal').classList.remove('hidden');
         }
 
@@ -1181,7 +1183,7 @@
 
         window.onload = function() {
             loadInitialState();
-            setInterval(syncWithCloud, 3000);
+            setInterval(syncWithCloud, 3000); // Vérification toutes les 3 secondes en arrière-plan
         }
     </script>
 </body>
