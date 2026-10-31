@@ -8,7 +8,7 @@
         "1": 4,
         "3": 1,
         "P1": 1,
-        "P2": 13
+        "P2": 12
       },
       "createdBy": "admin"
     },
@@ -63,7 +63,7 @@
       "from": "julie",
       "to": "Basile",
       "cardKey": "P2",
-      "resolved": false,
+      "resolved": true,
       "date": "31/10/2026"
     },
     {
