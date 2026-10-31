@@ -8,7 +8,7 @@
         "1": 3,
         "3": 1,
         "P1": 1,
-        "P2": 11,
+        "P2": 10,
         "P3": 1,
         "P4": 1
       },
@@ -141,7 +141,7 @@
       "from": "julie",
       "to": "Basile",
       "cardKey": "P2",
-      "resolved": false,
+      "resolved": true,
       "date": "01/11/2026"
     }
   ]
