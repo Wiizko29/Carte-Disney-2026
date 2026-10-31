@@ -211,7 +211,6 @@
                             <select id="colleague-selector" onchange="renderColleaguesCollectionTab()" class="py-2 px-3 bg-slate-900 text-white border border-slate-700 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                             </select>
                         </div>
-                        <!-- Bouton de suppression visible uniquement pour l'admin -->
                         <div id="admin-delete-container" class="hidden self-end">
                             <button onclick="deleteSelectedColleague()" class="py-2 px-3 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl transition shadow-md" title="Supprimer ce profil">
                                 <i class="fa-solid fa-trash-can"></i>
@@ -255,7 +254,8 @@
 
     <script>
         const STORAGE_URL = "https://json.extendsclass.com/bin/05696557b086";
-        const LOCAL_STORAGE_KEY = "collabcards_secure_db_v20";
+        // Clé de session unique pour s'assurer que le site charge le cloud en direct sans stocker les classeurs localement
+        const SESSION_CACHE_KEY = "collabcards_pure_cloud_v21";
 
         let db = {
             currentUserName: null,
@@ -265,50 +265,51 @@
             cards: {}
         };
 
-        // Utilisation de premium.png pour les cartes premium par défaut
         for (let i = 1; i <= 12; i++) {
-            db.cards[`P${i}`] = { name: `Carte Premium #${i}`, image: `premium.png`, isPremium: true };
+            db.cards[`P${i}`] = { name: `Carte Premium #${i}`, image: `premium.jpg`, isPremium: true };
         }
         for (let i = 1; i <= 108; i++) {
             db.cards[i.toString()] = { name: `Carte #${i}`, image: `${i}.png`, isPremium: false };
         }
 
         let isUpdating = false;
+        let saveTimeout = null;
 
+        // Enregistrement instantané en ligne avec protection anti-spam
         function saveAndPushCloud() {
             if (isUpdating) return;
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(db));
 
-            fetch(STORAGE_URL, {
-                method: 'PUT',
-                headers: { 'Type-Content': 'application/json', 'Content-Type': 'application/json' },
-                body: JSON.stringify({ colleagues: db.colleagues })
-            }).catch(err => console.error("Erreur sync cloud:", err));
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                fetch(STORAGE_URL, {
+                    method: 'PUT',
+                    headers: { 'Type-Content': 'application/json', 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ colleagues: db.colleagues })
+                }).catch(err => console.error("Erreur sync cloud:", err));
+            }, 500); // Sauvegarde immédiate après 0.5s d'inactivité
         }
 
+        // Synchronisation fluide en arrière-plan pour récupérer les modifs des collègues
         async function syncWithCloud() {
             if (isUpdating) return;
             try {
                 const response = await fetch(STORAGE_URL);
+                if (!response.ok) return;
                 const remoteData = await response.json();
                 if (remoteData && remoteData.colleagues && remoteData.colleagues.length > 0) {
                     isUpdating = true;
+                    // Fusion en direct des données distantes
                     let mergedColleagues = [...db.colleagues];
                     remoteData.colleagues.forEach(remoteCol => {
                         let existing = mergedColleagues.find(c => c.name.toLowerCase() === remoteCol.name.toLowerCase());
                         if (!existing) {
                             mergedColleagues.push(remoteCol);
                         } else {
-                            const remoteKeys = Object.keys(remoteCol.collection);
-                            const localKeys = Object.keys(existing.collection);
-                            if (remoteKeys.length >= localKeys.length) {
-                                existing.collection = remoteCol.collection;
-                            }
+                            existing.collection = remoteCol.collection;
                         }
                     });
                     db.colleagues = mergedColleagues;
                     isUpdating = false;
-                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(db));
                     refreshCurrentView();
                 }
             } catch(e) {}
@@ -329,32 +330,14 @@
                 document.getElementById('theme-icon').className = "fa-solid fa-sun text-xs";
             }
 
-            const local = localStorage.getItem(LOCAL_STORAGE_KEY);
-            if (local) {
-                try {
-                    const parsed = JSON.parse(local);
-                    if (parsed.colleagues && parsed.colleagues.length > 0) {
-                        db.colleagues = parsed.colleagues;
-                    }
-                } catch(e) {}
-            }
-
+            // Chargement direct depuis le cloud en priorite absolue
             try {
                 const response = await fetch(STORAGE_URL);
-                const remoteData = await response.json();
-                if (remoteData && remoteData.colleagues && remoteData.colleagues.length > 0) {
-                    remoteData.colleagues.forEach(remoteCol => {
-                        let existing = db.colleagues.find(c => c.name.toLowerCase() === remoteCol.name.toLowerCase());
-                        if (!existing) {
-                            db.colleagues.push(remoteCol);
-                        } else {
-                            const remoteKeys = Object.keys(remoteCol.collection);
-                            const localKeys = Object.keys(existing.collection);
-                            if (remoteKeys.length >= localKeys.length) {
-                                existing.collection = remoteCol.collection;
-                            }
-                        }
-                    });
+                if (response.ok) {
+                    const remoteData = await response.json();
+                    if (remoteData && remoteData.colleagues && remoteData.colleagues.length > 0) {
+                        db.colleagues = remoteData.colleagues;
+                    }
                 }
             } catch(e) {}
 
@@ -389,8 +372,8 @@
                 document.getElementById('welcome-modal').classList.remove('hidden');
             }
 
-            saveAndPushCloud();
-            setInterval(syncWithCloud, 3000);
+            // Actualisation douce toutes les 5 secondes pour voir les téléphones des collègues en temps réel sans saturer le serveur
+            setInterval(syncWithCloud, 5000);
         }
 
         function registerFirstUser() {
@@ -534,7 +517,7 @@
                 html += `<div onclick="openQtyModal('${user.id}', '${key}')" class="${cardStyle} rounded-2xl p-3 border border-slate-200 dark:border-slate-800 flex flex-col justify-between cursor-pointer select-none transition-all">
                     <div>
                         <div class="relative aspect-[3/4] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-950 mb-2 border border-slate-200 dark:border-slate-800">
-                            <img src="${card.image}" onerror="this.src='https://placehold.co/300x400/1e293b/22c55e?text=Card+${key}'" class="w-full h-full object-cover">
+                            <img src="${card.image}" class="w-full h-full object-cover">
                             <span class="absolute top-2 left-2 ${card.isPremium ? 'card-premium-badge text-white font-bold' : 'bg-slate-900/80 text-white'} text-[10px] px-2 py-0.5 rounded-md">${card.isPremium ? '✨ P' + key : '#' + key}</span>
                             ${qty > 0 ? `<span class="absolute top-2 right-2 bg-indigo-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">${qty} ex.</span>` : ''}
                         </div>
@@ -576,7 +559,7 @@
 
                 html += `<div onclick="openQtyModal('${targetCol.id}', '${key}')" class="${cardStyle} rounded-2xl p-3 border border-slate-200 dark:border-slate-800 cursor-pointer transition-all">
                     <div class="relative aspect-[3/4] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-950 mb-2 border border-slate-200 dark:border-slate-800">
-                        <img src="${card.image}" onerror="this.src='https://placehold.co/300x400/1e293b/22c55e?text=Card+${key}'" class="w-full h-full object-cover">
+                        <img src="${card.image}" class="w-full h-full object-cover">
                         <span class="absolute top-2 left-2 ${card.isPremium ? 'card-premium-badge text-white font-bold' : 'bg-slate-900/80 text-white'} text-[10px] px-2 py-0.5 rounded-md">${card.isPremium ? '✨ P' + key : '#' + key}</span>
                         ${qty > 0 ? `<span class="absolute top-2 right-2 bg-indigo-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">${qty} ex.</span>` : ''}
                     </div>
@@ -586,7 +569,6 @@
             document.getElementById('colleague-cards-grid').innerHTML = html;
         }
 
-        // Fonction réservée à l'admin pour supprimer un profil
         function deleteSelectedColleague() {
             if (!isAdmin()) return;
             const selector = document.getElementById('colleague-selector');
