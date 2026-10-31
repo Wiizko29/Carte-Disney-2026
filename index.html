@@ -201,11 +201,26 @@
 
         <!-- TAB 3 -->
         <section id="tab-colleagues" class="hidden space-y-6">
+            <!-- Bannière avec sélecteur de collègue et récapitulatif des stats -->
             <div class="bg-gradient-to-r from-emerald-900 via-slate-900 to-teal-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-emerald-500/20 flex flex-col md:flex-row items-center justify-between gap-6">
                 <div>
                     <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight" id="colleague-banner-title">Classeur de l'Équipe</h2>
+                    <p class="text-emerald-200/80 text-xs sm:text-sm mt-1">Consulte la collection de tes collègues en direct.</p>
                 </div>
                 <div class="flex items-center gap-4 flex-wrap">
+                    <!-- Récapitulatif des stats pour l'onglet Équipe -->
+                    <div class="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 flex items-center space-x-6">
+                        <div class="text-center">
+                            <span id="colleague-owned-count" class="block text-2xl font-extrabold text-emerald-400">0 / 120</span>
+                            <span class="text-[10px] text-emerald-200 uppercase font-bold tracking-wider">Total Possédées</span>
+                        </div>
+                        <div class="w-px h-8 bg-white/20"></div>
+                        <div class="text-center">
+                            <span id="colleague-missing-count" class="block text-2xl font-extrabold text-amber-400">120</span>
+                            <span class="text-[10px] text-emerald-200 uppercase font-bold tracking-wider">Manquantes</span>
+                        </div>
+                    </div>
+
                     <div class="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10 flex items-center gap-3">
                         <div>
                             <label class="block text-[10px] text-emerald-200 uppercase font-bold tracking-wider mb-1">Sélectionner un collègue :</label>
@@ -577,12 +592,13 @@
             const search = document.getElementById('colleague-search').value.toLowerCase();
             const filter = document.getElementById('colleague-filter').value;
 
-            let html = '';
+            let ownedCount = 0, html = '';
             getAllKeys().forEach(key => {
                 const card = db.cards[key];
                 if (!card) return;
                 const qty = targetCol.collection[key] || 0;
                 const isOwned = qty > 0;
+                if (isOwned) ownedCount++;
 
                 if (search && !key.toLowerCase().includes(search) && !card.name.toLowerCase().includes(search)) return;
                 if (filter === 'owned' && !isOwned) return;
@@ -602,6 +618,8 @@
                 </div>`;
             });
             grid.innerHTML = html;
+            document.getElementById('colleague-owned-count').innerText = `${ownedCount} / 120`;
+            document.getElementById('colleague-missing-count').innerText = 120 - ownedCount;
         }
 
         function deleteSelectedColleague() {
@@ -662,9 +680,9 @@
         function setModalQty(val) { document.getElementById('modal-qty-input').value = val; }
 
         function saveModalQty() {
-            const colId = document.getElementById('modal-target-colid').value;
-            const key = document.getElementById('modal-card-key').value;
-            const qty = parseInt(document.getElementById('modal-qty-input').value) || 0;
+            const colId = document.getElementById('modal-target-colid'].value;
+            const key = document.getElementById('modal-card-key'].value;
+            const qty = parseInt(document.getElementById('modal-qty-input'].value) || 0;
             const col = db.colleagues.find(c => c.id === colId);
             
             if (col) {
