@@ -22,7 +22,7 @@
         "2": 4,
         "3": 1,
         "6": 1,
-        "P8": 2,
+        "P8": 1,
         "P13": 1,
         "P9": 1,
         "P7": 1
@@ -109,7 +109,7 @@
       "from": "Basile",
       "to": "julie",
       "cardKey": "P8",
-      "resolved": false,
+      "resolved": true,
       "date": "31/10/2026"
     }
   ]
