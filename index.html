@@ -413,7 +413,7 @@
 
         let selectedColleagueIdForTab = null;
         let tempAvatarBase64 = null;
-        let lastLocalActionTime = 0; // Anti-saut global (quantités et demandes)
+        let lastLocalActionTime = 0; // Verrou anti-saut global
 
         for (let i = 1; i <= 24; i++) {
             db.cards[`P${i}`] = { name: `Carte Premium #${i}`, image: `premium.png`, isPremium: true };
@@ -455,7 +455,7 @@
         }
 
         async function saveAndPushCloud() {
-            lastLocalActionTime = Date.now(); // Déclenche le verrou anti-saut
+            lastLocalActionTime = Date.now(); // Active le verrou anti-saut de 25 secondes
             try {
                 const response = await fetch(WORKER_URL, {
                     method: "POST",
@@ -852,7 +852,7 @@
             if (!db.requests) return;
             const req = db.requests.find(r => r.id === reqId);
             if (req) {
-                req.resolved = true; // La demande est marquée comme résolue localement instantanément
+                req.resolved = true; // Marqué comme résolu instantanément
 
                 const owner = db.colleagues.find(c => c.name.toLowerCase() === ownerName.toLowerCase());
                 if (owner && owner.collection[cardKey]) {
@@ -862,7 +862,7 @@
                     }
                 }
 
-                saveAndPushCloud(); // Déclenche aussi le verrou anti-saut de 25s
+                saveAndPushCloud(); // Enregistre sur Cloudflare/GitHub et active le verrou anti-saut de 25s
                 updateNotificationsBanner();
                 refreshCurrentView();
                 renderMatrixTable();
