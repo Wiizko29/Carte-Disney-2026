@@ -51,14 +51,22 @@
             background: linear-gradient(135deg, rgba(254, 243, 199, 0.1) 0%, rgba(245, 158, 11, 0.15) 100%);
             opacity: 1 !important;
         }
+        /* Mode jour amélioré pour les cartes manquantes : plus contrasté et lisible */
         .card-missing {
+            opacity: 0.65;
+            filter: grayscale(40%);
+            border: 2px dashed rgba(156, 163, 175, 0.6);
+            background: rgba(226, 232, 240, 0.5);
+        }
+        .dark .card-missing {
             opacity: 0.35;
             filter: grayscale(80%);
             border: 1px dashed rgba(156, 163, 175, 0.4);
+            background: rgba(15, 23, 42, 0.5);
         }
     </style>
 </head>
-<body class="h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col transition-colors duration-300">
+<body class="h-full bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col transition-colors duration-300">
 
     <!-- MODAL CONNEXION / INSCRIPTION -->
     <div id="welcome-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
@@ -101,11 +109,25 @@
         </div>
     </div>
 
+    <!-- MODAL ZOOM CARTE (ONGLET ÉCHANGE) -->
+    <div id="card-zoom-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 text-center">
+            <div class="flex items-center justify-between">
+                <span id="zoom-card-badge" class="px-3 py-1 rounded-full text-xs font-bold"></span>
+                <button onclick="closeModal('card-zoom-modal')" class="text-slate-400 hover:text-slate-600 text-base"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="aspect-[3/4] rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-inner">
+                <img id="zoom-card-img" src="" class="w-full h-full object-cover">
+            </div>
+            <h3 id="zoom-card-title" class="text-base font-extrabold"></h3>
+            <button onclick="closeModal('card-zoom-modal')" class="w-full py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-bold rounded-xl transition">Fermer</button>
+        </div>
+    </div>
+
     <!-- HEADER -->
-    <header class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40">
+    <header class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
             <div class="flex items-center space-x-3.5">
-                <!-- Avatar agrandi dans l'en-tête -->
                 <div id="header-avatar-container" class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30 text-xl font-extrabold overflow-hidden border-2 border-emerald-400/50">
                     <span id="header-avatar-emoji">👑</span>
                     <img id="header-avatar-img" src="" class="w-full h-full object-cover hidden">
@@ -129,15 +151,15 @@
             </nav>
 
             <div class="flex items-center space-x-2">
-                <button onclick="openProfileModal()" class="px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5" title="Gérer mon profil">
+                <button onclick="openProfileModal()" class="px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm" title="Gérer mon profil">
                     <i class="fa-solid fa-user-pen text-xs"></i>
                     <span class="hidden sm:inline">Mon Profil</span>
                 </button>
-                <button onclick="disconnectProfile()" class="px-3.5 py-2 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 border border-red-200 dark:border-red-900 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 text-red-600 dark:text-red-400" title="Déconnexion">
+                <button onclick="disconnectProfile()" class="px-3.5 py-2 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 border border-red-200 dark:border-red-900 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 text-red-600 dark:text-red-400 shadow-sm" title="Déconnexion">
                     <i class="fa-solid fa-right-from-bracket text-xs"></i>
                     <span class="hidden sm:inline">Déconnexion</span>
                 </button>
-                <button onclick="toggleDarkMode()" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:scale-105 transition-transform" title="Thème">
+                <button onclick="toggleDarkMode()" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:scale-105 transition-transform shadow-sm" title="Thème">
                     <i id="theme-icon" class="fa-solid fa-moon text-xs"></i>
                 </button>
             </div>
@@ -182,7 +204,6 @@
                 </div>
             </div>
 
-            <!-- Filtres et Mode d'affichage -->
             <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                 <div class="flex items-center space-x-3 w-full sm:w-auto flex-wrap gap-y-2">
                     <div class="relative flex-1 sm:w-64">
@@ -198,8 +219,7 @@
                         <option value="normal">Uniquement Normales (1-108)</option>
                     </select>
                 </div>
-                <!-- Sélecteur de mode d'affichage -->
-                <div class="flex items-center space-x-3 w-full sm:w-auto justify-end">
+                <div class="flex items-center space-x-3 w-full sm:w-auto justify-end flex-wrap gap-y-2">
                     <div class="flex items-center space-x-2">
                         <label class="text-xs font-bold text-slate-500">Affichage :</label>
                         <select id="my-layout" onchange="renderMyCollection()" class="py-2 px-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none">
@@ -209,20 +229,20 @@
                             <option value="list">Mode Liste (Compact)</option>
                         </select>
                     </div>
-                    <button onclick="myBulkSet(true)" class="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-bold rounded-xl">Tout cocher</button>
-                    <button onclick="myBulkSet(false)" class="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-bold rounded-xl">Tout vider</button>
+                    <button onclick="myBulkSet(true)" class="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-bold rounded-xl transition">Tout cocher</button>
+                    <button onclick="myBulkSet(false)" class="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-bold rounded-xl transition">Tout vider</button>
                 </div>
             </div>
 
             <div id="my-cards-container"></div>
         </section>
 
-        <!-- TAB 2 -->
+        <!-- TAB 2 : ÉCHANGES (Amélioré et plus lisible) -->
         <section id="tab-exchanges" class="hidden space-y-6">
             <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-2xl font-extrabold tracking-tight">Bourse aux Doublons de l'Équipe</h2>
-                    <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">Recherchez une carte pour voir les collègues qui possèdent des doublons.</p>
+                    <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">Retrouvez les doublons de chaque collègue. Cliquez sur une carte pour l'agrandir.</p>
                 </div>
             </div>
 
@@ -233,11 +253,8 @@
                 </div>
             </div>
 
-            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
-                <div class="overflow-x-auto custom-scrollbar">
-                    <table id="matrix-table" class="w-full text-left border-collapse"></table>
-                </div>
-            </div>
+            <!-- Grille / Cartes des doublons modernisée pour une lecture ultra claire -->
+            <div id="exchanges-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
         </section>
 
         <!-- TAB 3 -->
@@ -275,7 +292,6 @@
                 </div>
             </div>
 
-            <!-- Filtres et Mode d'affichage pour l'équipe -->
             <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                 <div class="flex items-center space-x-3 w-full sm:w-auto flex-wrap gap-y-2">
                     <div class="relative flex-1 sm:w-64">
@@ -647,7 +663,25 @@
             }
         }
 
-        // Fonction universelle pour générer l'affichage des cartes (Grilles ou Liste)
+        // Fonction pour afficher une carte en grand dans l'onglet Échange
+        function zoomCard(key) {
+            const card = db.cards[key];
+            if (!card) return;
+            document.getElementById('zoom-card-img').src = card.image;
+            document.getElementById('zoom-card-title').innerText = card.name;
+            
+            const badge = document.getElementById('zoom-card-badge');
+            if (card.isPremium) {
+                badge.className = "card-premium-badge text-white text-xs font-bold px-3 py-1 rounded-full";
+                badge.innerText = `✨ Carte Premium ${key}`;
+            } else {
+                badge.className = "bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full";
+                badge.innerText = `Carte Normale #${key}`;
+            }
+
+            document.getElementById('card-zoom-modal').classList.remove('hidden');
+        }
+
         function generateCardsHTML(targetCol, searchId, filterId, layoutId, containerId, countOwnedId, countMissingId) {
             const container = document.getElementById(containerId);
             const search = document.getElementById(searchId).value.toLowerCase();
@@ -684,12 +718,11 @@
             let html = '';
 
             if (layout === 'list') {
-                // Mode Liste Compacte
                 html = `<div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-slate-800">`;
                 cardsToRender.forEach(({ key, card, qty, isOwned }) => {
                     let badgeClass = card.isPremium ? "card-premium-badge text-white" : "bg-slate-900 text-white";
-                    html += `<div onclick="openQtyModal('${targetCol.id}', '${key}')" class="flex items-center justify-between p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition">
-                        <div class="flex items-center space-x-3">
+                    html += `<div class="flex items-center justify-between p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
+                        <div class="flex items-center space-x-3 cursor-pointer" onclick="openQtyModal('${targetCol.id}', '${key}')">
                             <div class="w-10 h-12 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-950 flex-shrink-0 border border-slate-200 dark:border-slate-800">
                                 <img src="${card.image}" class="w-full h-full object-cover">
                             </div>
@@ -701,7 +734,7 @@
                             </div>
                         </div>
                         <div class="flex items-center space-x-3">
-                            <span class="text-xs font-bold px-2.5 py-1 rounded-full ${isOwned ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}">
+                            <span onclick="openQtyModal('${targetCol.id}', '${key}')" class="text-xs font-bold px-2.5 py-1 rounded-full ${isOwned ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 cursor-pointer' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-pointer'}">
                                 ${isOwned ? qty + ' ex. possédés' : 'Manquante'}
                             </span>
                         </div>
@@ -709,7 +742,6 @@
                 });
                 html += `</div>`;
             } else {
-                // Modes Grille (grid-5, grid-3, grid-2)
                 let gridColsClass = "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5";
                 if (layout === 'grid-3') gridColsClass = "grid-cols-1 sm:grid-cols-2 md:grid-cols-3";
                 if (layout === 'grid-2') gridColsClass = "grid-cols-1 sm:grid-cols-2";
@@ -723,14 +755,14 @@
                         cardStyle = isOwned ? "card-owned-glow bg-white dark:bg-slate-900" : "card-missing bg-white dark:bg-slate-900";
                     }
 
-                    html += `<div onclick="openQtyModal('${targetCol.id}', '${key}')" class="${cardStyle} rounded-2xl p-3 border border-slate-200 dark:border-slate-800 flex flex-col justify-between cursor-pointer select-none transition-all">
+                    html += `<div class="${cardStyle} rounded-2xl p-3 border border-slate-200 dark:border-slate-800 flex flex-col justify-between select-none transition-all">
                         <div>
-                            <div class="relative aspect-[3/4] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-950 mb-2 border border-slate-200 dark:border-slate-800">
+                            <div onclick="openQtyModal('${targetCol.id}', '${key}')" class="relative aspect-[3/4] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-950 mb-2 border border-slate-200 dark:border-slate-800 cursor-pointer">
                                 <img src="${card.image}" class="w-full h-full object-cover">
                                 <span class="absolute top-2 left-2 ${card.isPremium ? 'card-premium-badge text-white font-bold' : 'bg-slate-900/80 text-white'} text-[10px] px-2 py-0.5 rounded-md">${card.isPremium ? '✨ P' + key : '#' + key}</span>
                                 ${qty > 0 ? `<span class="absolute top-2 right-2 bg-indigo-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">${qty} ex.</span>` : ''}
                             </div>
-                            <h4 class="font-bold text-xs truncate">${card.name}</h4>
+                            <h4 onclick="openQtyModal('${targetCol.id}', '${key}')" class="font-bold text-xs truncate cursor-pointer">${card.name}</h4>
                         </div>
                     </div>`;
                 });
@@ -852,24 +884,13 @@
             }
         }
 
+        // Refonte de l'onglet Échanges sous forme de cartes / blocs cliquables ultra lisibles
         function renderMatrixTable() {
-            const table = document.getElementById('matrix-table');
+            const container = document.getElementById('exchanges-cards-container');
             const searchVal = document.getElementById('exchange-search').value.toLowerCase().trim();
 
-            let html = `<thead><tr class="bg-slate-100 dark:bg-slate-950 text-[11px] font-bold text-slate-500 uppercase"><th class="p-4">Carte (Doublons)</th>`;
-            db.colleagues.forEach(c => { 
-                let avatarHtml = '';
-                // Avatar agrandi dans le tableau des échanges (taille w-9 h-9)
-                if (c.avatar && c.avatar.startsWith('data:image')) {
-                    avatarHtml = `<img src="${c.avatar}" class="w-9 h-9 rounded-full object-cover inline-block mr-2 align-middle border border-emerald-500/50 shadow-sm">`;
-                } else {
-                    avatarHtml = `<span class="mr-2 text-base align-middle">${c.avatar || '😎'}</span>`;
-                }
-                html += `<th class="p-4 text-center">${avatarHtml} <span class="align-middle">${c.name}</span></th>`; 
-            });
-            html += `</tr></thead><tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">`;
-
             let foundAny = false;
+            let html = '';
 
             getAllKeys().forEach(key => {
                 const hasDup = db.colleagues.some(c => (c.collection[key] || 0) > 1);
@@ -883,19 +904,51 @@
                 }
 
                 foundAny = true;
-                html += `<tr><td class="p-4 font-bold flex items-center space-x-3"><div class="w-8 h-10 rounded overflow-hidden bg-slate-100 dark:bg-slate-950 flex-shrink-0"><img src="${card.image}" class="w-full h-full object-cover"></div><span>${card.name}</span></td>`;
+                let badgeClass = card.isPremium ? "card-premium-badge text-white" : "bg-slate-900 text-white";
+
+                html += `<div class="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center space-x-4">
+                    <!-- Image de la carte cliquable pour zoomer -->
+                    <div onclick="zoomCard('${key}')" class="w-20 h-24 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-950 flex-shrink-0 border border-slate-200 dark:border-slate-800 cursor-pointer shadow-inner relative group">
+                        <img src="${card.image}" class="w-full h-full object-cover group-hover:scale-105 transition">
+                        <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs">
+                            <i class="fa-solid fa-magnifying-glass-plus"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center space-x-2 mb-1">
+                            <span class="${badgeClass} text-[10px] font-bold px-2 py-0.5 rounded-md">${card.isPremium ? '✨ P' + key : '#' + key}</span>
+                            <h4 onclick="zoomCard('${key}')" class="font-extrabold text-sm truncate cursor-pointer hover:text-emerald-500 transition">${card.name}</h4>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mb-3">Doublons disponibles chez :</p>
+                        
+                        <div class="flex flex-wrap gap-2">`;
+
                 db.colleagues.forEach(c => {
                     let qty = c.collection[key] || 0;
-                    html += `<td class="p-4 text-center"><span onclick="openQtyModal('${c.id}', '${key}')" class="px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white cursor-pointer font-bold shadow-sm inline-block">${qty > 1 ? qty + ' ex.' : '-'}</span></td>`;
+                    if (qty > 1) {
+                        let avatarHtml = '';
+                        if (c.avatar && c.avatar.startsWith('data:image')) {
+                            avatarHtml = `<img src="${c.avatar}" class="w-6 h-6 rounded-full object-cover border border-emerald-500 shadow-sm">`;
+                        } else {
+                            avatarHtml = `<span class="text-sm">${c.avatar || '😎'}</span>`;
+                        }
+
+                        html += `<div onclick="openQtyModal('${c.id}', '${key}')" class="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 text-indigo-700 dark:text-indigo-300 text-xs font-bold cursor-pointer hover:bg-indigo-100 transition" title="Modifier chez ${c.name}">
+                            ${avatarHtml}
+                            <span>${c.name} : <strong>${qty} ex.</strong></span>
+                        </div>`;
+                    }
                 });
-                html += `</tr>`;
+
+                html += `</div></div></div>`;
             });
 
             if (!foundAny) {
-                html += `<tr><td colspan="${db.colleagues.length + 1}" class="p-8 text-center text-slate-400">Aucun doublon trouvé pour cette recherche.</td></tr>`;
+                html = `<div class="col-span-full p-12 text-center text-slate-400 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">Aucun doublon disponible pour le moment ou pour cette recherche.</div>`;
             }
 
-            table.innerHTML = html + `</tbody>`;
+            container.innerHTML = html;
         }
 
         function myBulkSet(status) {
