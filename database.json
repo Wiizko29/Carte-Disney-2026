@@ -57,6 +57,14 @@
       "cardKey": "3",
       "resolved": true,
       "date": "31/10/2026"
+    },
+    {
+      "id": "req_1793475287477",
+      "from": "julie",
+      "to": "Basile",
+      "cardKey": "P2",
+      "resolved": false,
+      "date": "31/10/2026"
     }
   ]
 }
