@@ -84,27 +84,51 @@
         </div>
     </div>
 
-    <!-- MODAL GÉRER MON PROFIL -->
+    <!-- MODAL GÉRER MON PROFIL & DEMANDES -->
     <div id="profile-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6 text-center">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6 text-center max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div class="flex items-center justify-between">
-                <h3 class="text-lg font-extrabold">Gérer mon profil</h3>
+                <h3 class="text-lg font-extrabold">Mon Profil & Demandes</h3>
                 <button onclick="closeModal('profile-modal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div class="flex flex-col items-center space-y-4">
+
+            <!-- Changement de photo -->
+            <div class="flex flex-col items-center space-y-4 pb-6 border-b border-slate-100 dark:border-slate-800">
                 <div class="relative w-24 h-24 rounded-full overflow-hidden border-2 border-emerald-500 bg-slate-100 dark:bg-slate-800 flex items-center justify-center shadow-md">
                     <img id="profile-modal-avatar-preview" src="" class="w-full h-full object-cover hidden">
                     <span id="profile-modal-avatar-emoji" class="text-3xl">👑</span>
                 </div>
                 <div class="w-full">
-                    <label class="block text-xs font-semibold text-slate-500 mb-2">Choisir une nouvelle photo de profil :</label>
+                    <label class="block text-xs font-semibold text-slate-500 mb-2">Changer ma photo de profil :</label>
                     <input type="file" id="profile-avatar-file" accept="image/*" onchange="previewAvatarImage(event)" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer">
                 </div>
+                <button onclick="saveProfileAvatar()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md transition">Enregistrer la photo</button>
             </div>
-            <div class="grid grid-cols-2 gap-2 pt-2">
-                <button onclick="closeModal('profile-modal')" class="py-2.5 bg-slate-100 dark:bg-slate-800 text-xs font-bold rounded-xl transition">Annuler</button>
-                <button onclick="saveProfileAvatar()" class="py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md transition">Enregistrer</button>
+
+            <!-- Section demandes en attente dans le profil -->
+            <div class="space-y-3 text-left">
+                <h4 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Demandes d'échange reçues :</h4>
+                <div id="profile-requests-list" class="space-y-2">
+                    <p class="text-xs text-slate-400 italic text-center py-2">Aucune demande en attente.</p>
+                </div>
             </div>
+
+            <button onclick="closeModal('profile-modal')" class="w-full py-2.5 bg-slate-100 dark:bg-slate-800 text-xs font-bold rounded-xl transition">Fermer</button>
+        </div>
+    </div>
+
+    <!-- MODAL POPUP LISTE DES DEMANDES (VIA BANDEAU) -->
+    <div id="requests-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-5 text-center max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2 text-orange-600 dark:text-orange-400 font-extrabold text-base">
+                    <i class="fa-solid fa-bell"></i>
+                    <span>Demandes d'échange des collègues</span>
+                </div>
+                <button onclick="closeModal('requests-modal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="modal-requests-list" class="space-y-3 text-left"></div>
+            <button onclick="closeModal('requests-modal')" class="w-full py-2.5 bg-slate-100 dark:bg-slate-800 text-xs font-bold rounded-xl transition">Fermer</button>
         </div>
     </div>
 
@@ -165,9 +189,10 @@
             </nav>
 
             <div class="flex items-center space-x-2">
-                <button onclick="openProfileModal()" class="px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm" title="Gérer mon profil">
+                <button onclick="openProfileModal()" class="px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm relative" title="Gérer mon profil">
                     <i class="fa-solid fa-user-pen text-xs"></i>
                     <span class="hidden sm:inline">Mon Profil</span>
+                    <span id="profile-badge-count" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full shadow">0</span>
                 </button>
                 <button onclick="disconnectProfile()" class="px-3.5 py-2 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 border border-red-200 dark:border-red-900 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 text-red-600 dark:text-red-400 shadow-sm" title="Déconnexion">
                     <i class="fa-solid fa-right-from-bracket text-xs"></i>
@@ -195,13 +220,15 @@
     <!-- MAIN -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-        <!-- ZONE DE NOTIFICATIONS / DEMANDES REÇUES -->
-        <div id="notifications-banner" class="hidden bg-gradient-to-r from-amber-500 to-orange-600 rounded-3xl p-5 text-white shadow-lg space-y-3">
-            <div class="flex items-center space-x-2 text-sm font-extrabold">
-                <i class="fa-solid fa-bell animate-bounce"></i>
-                <span>Demandes d'échange reçues de tes collègues :</span>
+        <!-- BANDEAU DISCRET DE NOTIFICATION -->
+        <div id="notifications-banner" class="hidden bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl p-4 text-white shadow-md flex items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-bell text-lg animate-bounce"></i>
+                <span class="text-xs sm:text-sm font-bold">Vous avez de nouvelles demandes d'échange de vos collègues !</span>
             </div>
-            <div id="notifications-list" class="space-y-2"></div>
+            <button onclick="openRequestsModal()" class="px-4 py-2 bg-white text-orange-600 text-xs font-extrabold rounded-xl hover:bg-orange-50 transition shadow-sm flex-shrink-0">
+                Voir les demandes
+            </button>
         </div>
 
         <!-- TAB 1 -->
@@ -637,6 +664,10 @@
                 previewImg.classList.add('hidden');
             }
             document.getElementById('profile-avatar-file').value = '';
+            
+            // Mettre à jour aussi la liste des demandes dans la modale profil
+            updateProfileRequestsList();
+
             document.getElementById('profile-modal').classList.remove('hidden');
         }
 
@@ -692,7 +723,6 @@
             }
         }
 
-        // Envoyer une demande et ouvrir la popup de confirmation visuelle
         function requestDuplicate(ownerName, cardKey) {
             const currentUser = getCurrentUser();
             if (!currentUser) return;
@@ -721,7 +751,6 @@
 
             saveAndPushCloud();
 
-            // Affichage de la popup de confirmation visuelle
             const card = db.cards[cardKey];
             const cardName = card ? card.name : `Carte #${cardKey}`;
             document.getElementById('request-success-text').innerHTML = `Ta demande pour la carte <strong>${cardName}</strong> a bien été transmise à <strong>${ownerName}</strong> ! Il la verra dès sa prochaine connexion.`;
@@ -730,52 +759,100 @@
             updateNotificationsBanner();
         }
 
-        // Gestion de l'affichage des notifications reçues
         function updateNotificationsBanner() {
             const currentUser = getCurrentUser();
             if (!currentUser) return;
 
             const banner = document.getElementById('notifications-banner');
-            const list = document.getElementById('notifications-list');
-            const badge = document.getElementById('exchange-badge-count');
+            const exchangeBadge = document.getElementById('exchange-badge-count');
+            const profileBadge = document.getElementById('profile-badge-count');
 
             if (!db.requests) db.requests = [];
 
             const myRequests = db.requests.filter(r => r.to.toLowerCase() === currentUser.name.toLowerCase() && !r.resolved);
 
             if (myRequests.length > 0) {
-                badge.innerText = myRequests.length;
-                badge.classList.remove('hidden');
+                exchangeBadge.innerText = myRequests.length;
+                exchangeBadge.classList.remove('hidden');
+                profileBadge.innerText = myRequests.length;
+                profileBadge.classList.remove('hidden');
                 banner.classList.remove('hidden');
-
-                let html = '';
-                myRequests.forEach(req => {
-                    const card = db.cards[req.cardKey];
-                    const cardName = card ? card.name : `Carte #${req.cardKey}`;
-                    html += `<div class="bg-white/10 backdrop-blur-md p-3 rounded-2xl flex items-center justify-between gap-4 text-xs">
-                        <div>
-                            <strong>${req.from}</strong> aimerait récupérer ton doublon de <strong>${cardName}</strong> (${req.cardKey.startsWith('P') ? 'Premium' : '#' + req.cardKey}).
-                        </div>
-                        <button onclick="resolveRequest('${req.id}', '${req.to}', '${req.cardKey}')" class="px-3 py-1.5 bg-white text-orange-600 font-bold rounded-xl hover:bg-orange-50 transition shadow-sm flex-shrink-0">
-                            C'est fait / OK 👍 (-1 ex.)
-                        </button>
-                    </div>`;
-                });
-                list.innerHTML = html;
             } else {
-                badge.classList.add('hidden');
+                exchangeBadge.classList.add('hidden');
+                profileBadge.classList.add('hidden');
                 banner.classList.add('hidden');
             }
+            updateProfileRequestsList();
+            updateModalRequestsList();
         }
 
-        // Lorsque la personne valide, on résout la demande ET on retire automatiquement un doublon de son classeur
+        function updateProfileRequestsList() {
+            const currentUser = getCurrentUser();
+            const listEl = document.getElementById('profile-requests-list');
+            if (!currentUser || !listEl) return;
+
+            const myRequests = db.requests.filter(r => r.to.toLowerCase() === currentUser.name.toLowerCase() && !r.resolved);
+
+            if (myRequests.length === 0) {
+                listEl.innerHTML = `<p class="text-xs text-slate-400 italic text-center py-2">Aucune demande en attente.</p>`;
+                return;
+            }
+
+            let html = '';
+            myRequests.forEach(req => {
+                const card = db.cards[req.cardKey];
+                const cardName = card ? card.name : `Carte #${req.cardKey}`;
+                html += `<div class="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 text-xs">
+                    <div>
+                        <strong>${req.from}</strong> veut <strong>${cardName}</strong> (${req.cardKey.startsWith('P') ? 'Premium' : '#' + req.cardKey})
+                    </div>
+                    <button onclick="resolveRequest('${req.id}', '${req.to}', '${req.cardKey}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition shadow-sm flex-shrink-0">
+                        Valider 👍 (-1 ex.)
+                    </button>
+                </div>`;
+            });
+            listEl.innerHTML = html;
+        }
+
+        function openRequestsModal() {
+            updateModalRequestsList();
+            document.getElementById('requests-modal').classList.remove('hidden');
+        }
+
+        function updateModalRequestsList() {
+            const currentUser = getCurrentUser();
+            const listEl = document.getElementById('modal-requests-list');
+            if (!currentUser || !listEl) return;
+
+            const myRequests = db.requests.filter(r => r.to.toLowerCase() === currentUser.name.toLowerCase() && !r.resolved);
+
+            if (myRequests.length === 0) {
+                listEl.innerHTML = `<p class="text-xs text-slate-400 italic text-center py-4">Aucune demande en attente.</p>`;
+                return;
+            }
+
+            let html = '';
+            myRequests.forEach(req => {
+                const card = db.cards[req.cardKey];
+                const cardName = card ? card.name : `Carte #${req.cardKey}`;
+                html += `<div class="bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4 text-xs">
+                    <div>
+                        <strong>${req.from}</strong> aimerait récupérer ton doublon de <strong>${cardName}</strong> (${req.cardKey.startsWith('P') ? 'Premium' : '#' + req.cardKey}).
+                    </div>
+                    <button onclick="resolveRequest('${req.id}', '${req.to}', '${req.cardKey}'); closeModal('requests-modal');" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition shadow-sm flex-shrink-0">
+                        C'est fait / OK 👍 (-1 ex.)
+                    </button>
+                </div>`;
+            });
+            listEl.innerHTML = html;
+        }
+
         function resolveRequest(reqId, ownerName, cardKey) {
             if (!db.requests) return;
             const req = db.requests.find(r => r.id === reqId);
             if (req) {
                 req.resolved = true;
 
-                // Retirer automatiquement un doublon du propriétaire de la carte
                 const owner = db.colleagues.find(c => c.name.toLowerCase() === ownerName.toLowerCase());
                 if (owner && owner.collection[cardKey]) {
                     owner.collection[cardKey] -= 1;
