@@ -254,7 +254,11 @@
     </div>
 
     <script>
-        const STORAGE_URL = "https://api.npoint.io/6ab79024d17f4555ce7f";
+        // CONFIGURATION GITHUB API
+        const GH_OWNER = "Wiiizko29";
+        const GH_REPO = "Carte-Disney-2026";
+        const GH_FILE = "database.json";
+        const GH_TOKEN = "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"; // Ton jeton GitHub
 
         let db = {
             currentUserName: null,
@@ -264,7 +268,6 @@
             cards: {}
         };
 
-        // Utilisation correcte de premium.png
         for (let i = 1; i <= 12; i++) {
             db.cards[`P${i}`] = { name: `Carte Premium #${i}`, image: `premium.png`, isPremium: true };
         }
@@ -274,39 +277,65 @@
 
         let isUpdating = false;
         let saveTimeout = null;
+        let fileSha = null; // Nécessaire pour mettre à jour un fichier sur l'API GitHub
 
-        // Enregistrement instantané en ligne avec protection anti-spam (uniquement sur action)
-        // Enregistrement vers le Cloud avec les bons en-têtes CORS
-        function saveAndPushCloud() {
+        // Sauvegarde sur GitHub (Commit automatique du fichier database.json)
+        async function saveAndPushCloud() {
             if (isUpdating) return;
 
             clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => {
-                fetch(STORAGE_URL, {
-                    method: 'PUT',
-                    headers: { 
-                        'Content-Type': 'application/json' 
-                    },
-                    body: JSON.stringify({ colleagues: db.colleagues })
-                })
-                .then(response => {
-                    if (!response.ok) throw new Error("Erreur réseau du serveur");
-                })
-                .catch(err => console.error("Erreur sync cloud:", err));
-            }, 500);
+            saveTimeout = setTimeout(async () => {
+                try {
+                    const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
+                    
+                    // 1. On récupère d'abord le SHA actuel du fichier (requis par l'API GitHub pour écraser/mettre à jour)
+                    const getRes = await fetch(apiUrl, {
+                        headers: { 'Authorization': `token ${GH_TOKEN}` }
+                    });
+                    if (getRes.ok) {
+                        const fileData = await getRes.json();
+                        fileSha = fileData.sha;
+                    }
+
+                    // 2. On pousse le nouveau contenu encodé en Base64
+                    const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify({ colleagues: db.colleagues }, null, 2))));
+
+                    await fetch(apiUrl, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${GH_TOKEN}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: "Mise à jour de la collection via CardCollab Live",
+                            content: contentBase64,
+                            sha: fileSha
+                        })
+                    });
+                } catch (err) {
+                    console.error("Erreur sync GitHub:", err);
+                }
+            }, 800);
         }
 
-        // Synchronisation manuelle ou lors des changements d'onglets (plus de boucle agressive setInterval)
+        // Chargement depuis GitHub
         async function syncWithCloud() {
             if (isUpdating) return;
             try {
-                const response = await fetch(STORAGE_URL);
+                const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
+                const response = await fetch(apiUrl, {
+                    headers: { 'Authorization': `token ${GH_TOKEN}` }
+                });
                 if (!response.ok) return;
-                const remoteData = await response.json();
-                if (remoteData && remoteData.colleagues && remoteData.colleagues.length > 0) {
+                const fileData = await response.json();
+                fileSha = fileData.sha;
+                
+                const decodedJson = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
+
+                if (decodedJson && decodedJson.colleagues && decodedJson.colleagues.length > 0) {
                     isUpdating = true;
                     let mergedColleagues = [...db.colleagues];
-                    remoteData.colleagues.forEach(remoteCol => {
+                    decodedJson.colleagues.forEach(remoteCol => {
                         let existing = mergedColleagues.find(c => c.name.toLowerCase() === remoteCol.name.toLowerCase());
                         if (!existing) {
                             mergedColleagues.push(remoteCol);
@@ -336,15 +365,7 @@
                 document.getElementById('theme-icon').className = "fa-solid fa-sun text-xs";
             }
 
-            try {
-                const response = await fetch(STORAGE_URL);
-                if (response.ok) {
-                    const remoteData = await response.json();
-                    if (remoteData && remoteData.colleagues && remoteData.colleagues.length > 0) {
-                        db.colleagues = remoteData.colleagues;
-                    }
-                }
-            } catch(e) {}
+            await syncWithCloud();
 
             let basile = db.colleagues.find(c => c.name.toLowerCase().trim() === "basile");
             if (!basile) {
@@ -376,9 +397,6 @@
             } else {
                 document.getElementById('welcome-modal').classList.remove('hidden');
             }
-
-            // SUPPRESSION DU SETINTERVAL EN BOUCLE QUI PROVOQUAIT LES ERREURS 429. 
-            // La synchronisation se fait désormais proprement à l'ouverture et lors de chaque action.
         }
 
         function registerFirstUser() {
@@ -435,7 +453,6 @@
         }
 
         function switchTab(tab) {
-            // À chaque changement d'onglet, on synchronise proprement pour récupérer les dernières données des collègues
             syncWithCloud();
 
             ['mycollection', 'exchanges', 'colleagues'].forEach(t => {
