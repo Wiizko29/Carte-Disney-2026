@@ -1,5 +1,13 @@
 {
   "colleagues": [
-    { "id": "col_basile", "name": "Basile", "avatar": "👑", "collection": {}, "createdBy": "admin" }
+    {
+      "id": "col_basile",
+      "name": "Basile",
+      "avatar": "👑",
+      "collection": {
+        "P1": 1
+      },
+      "createdBy": "admin"
+    }
   ]
 }
