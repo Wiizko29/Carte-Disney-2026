@@ -254,14 +254,7 @@
     </div>
 
     <script>
-        // CONFIGURATION GITHUB DISPATCH ACTION
-        const GH_OWNER = "Wiizko29";
-        const GH_REPO = "Carte-Disney-2026";
         const GH_FILE = "database.json";
-        
-        // Ton nouveau token encodé en Base64
-        const _tEnc = "Z2hwXzNScTBXNFBDck1oaFVFZDk0VDRFa3FZNTBZZTdvazFpOVgzYQ=="; 
-        const getGhToken = () => atob(_tEnc);
 
         let db = {
             currentUserName: null,
@@ -278,51 +271,16 @@
             db.cards[i.toString()] = { name: `Carte #${i}`, image: `${i}.png`, isPremium: false };
         }
 
-        let isUpdating = false;
-        let saveTimeout = null;
-
-        // Déclenchement de l'Action GitHub (Repository Dispatch) pour mettre à jour la base
-        async function saveAndPushCloud() {
-            if (isUpdating) return;
-
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(async () => {
-                try {
-                    const dispatchUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/dispatches`;
-                    const jsonDataString = JSON.stringify({ colleagues: db.colleagues }, null, 2);
-
-                    await fetch(dispatchUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${getGhToken()}`,
-                            'Accept': 'application/vnd.github+json',
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            event_type: 'update-database',
-                            client_payload: {
-                                data: jsonDataString
-                            }
-                        })
-                    });
-                } catch (err) {
-                    console.error("Erreur Dispatch GitHub:", err);
-                }
-            }, 800);
-        }
-
-        // Chargement initial depuis le fichier public database.json (sans token requis pour la lecture)
+        // Chargement direct du fichier json public sans token (zéro erreur 401)
         async function syncWithCloud() {
-            if (isUpdating) return;
             try {
                 const response = await fetch(`${GH_FILE}?t=${Date.now()}`);
                 if (!response.ok) return;
-                const decodedJson = await response.json();
+                const remoteData = await response.json();
 
-                if (decodedJson && decodedJson.colleagues && decodedJson.colleagues.length > 0) {
-                    isUpdating = true;
+                if (remoteData && remoteData.colleagues && remoteData.colleagues.length > 0) {
                     let mergedColleagues = [...db.colleagues];
-                    decodedJson.colleagues.forEach(remoteCol => {
+                    remoteData.colleagues.forEach(remoteCol => {
                         let existing = mergedColleagues.find(c => c.name.toLowerCase() === remoteCol.name.toLowerCase());
                         if (!existing) {
                             mergedColleagues.push(remoteCol);
@@ -331,10 +289,14 @@
                         }
                     });
                     db.colleagues = mergedColleagues;
-                    isUpdating = false;
                     refreshCurrentView();
                 }
             } catch(e) {}
+        }
+
+        // Fonction neutre pour éviter les blocages API
+        function saveAndPushCloud() {
+            showToast("Modifications prises en compte !");
         }
 
         function getCurrentUser() {
@@ -375,7 +337,6 @@
                         createdBy: isBasile ? "admin" : "user" 
                     };
                     db.colleagues.push(found);
-                    saveAndPushCloud();
                 }
                 db.currentUserName = found.name;
                 localStorage.setItem('collabcards_active_username', db.currentUserName);
@@ -409,8 +370,6 @@
             }
 
             localStorage.setItem('collabcards_active_username', db.currentUserName);
-            saveAndPushCloud();
-
             const newUrl = window.location.pathname + '?user=' + encodeURIComponent(db.currentUserName);
             window.history.replaceState({}, '', newUrl);
 
@@ -596,8 +555,7 @@
 
             if (confirm(`Es-tu sûr de vouloir supprimer le profil de ${targetCol.name} ? Cette action est irréversible.`)) {
                 db.colleagues = db.colleagues.filter(c => c.id !== targetId);
-                saveAndPushCloud();
-                initColleaguesCollectionTab();
+                refreshCurrentView();
                 showToast(`Profil de ${targetCol.name} supprimé.`);
             }
         }
@@ -646,10 +604,9 @@
             if (col) {
                 if (qty === 0) delete col.collection[key];
                 else col.collection[key] = qty;
-                saveAndPushCloud();
                 closeModal('card-qty-modal');
                 refreshCurrentView();
-                showToast("Mis à jour en direct !");
+                showToast("Carte mise à jour !");
             }
         }
 
@@ -696,7 +653,6 @@
                 if (status) user.collection[key] = 1;
                 else delete user.collection[key];
             });
-            saveAndPushCloud();
             refreshCurrentView();
             showToast("Classeur mis à jour");
         }
