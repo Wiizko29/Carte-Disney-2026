@@ -413,7 +413,7 @@
 
         let selectedColleagueIdForTab = null;
         let tempAvatarBase64 = null;
-        let lastLocalActionTime = 0; // Anti-saut : mémorise le moment de ta dernière action
+        let lastLocalActionTime = 0; // Anti-saut global (quantités et demandes)
 
         for (let i = 1; i <= 24; i++) {
             db.cards[`P${i}`] = { name: `Carte Premium #${i}`, image: `premium.png`, isPremium: true };
@@ -423,8 +423,7 @@
         }
 
         async function syncWithCloud() {
-            // Anti-saut : Si tu as fait une modification il y a moins de 25 secondes, 
-            // on ignore temporairement la synchro automatique pour ne pas écraser ton écran !
+            // Anti-saut : Si une action a été faite il y a moins de 25 secondes, on ignore la synchro
             if (Date.now() - lastLocalActionTime < 25000) return;
 
             try {
@@ -456,7 +455,7 @@
         }
 
         async function saveAndPushCloud() {
-            lastLocalActionTime = Date.now(); // On déclenche le verrou anti-saut ici
+            lastLocalActionTime = Date.now(); // Déclenche le verrou anti-saut
             try {
                 const response = await fetch(WORKER_URL, {
                     method: "POST",
@@ -853,7 +852,7 @@
             if (!db.requests) return;
             const req = db.requests.find(r => r.id === reqId);
             if (req) {
-                req.resolved = true;
+                req.resolved = true; // La demande est marquée comme résolue localement instantanément
 
                 const owner = db.colleagues.find(c => c.name.toLowerCase() === ownerName.toLowerCase());
                 if (owner && owner.collection[cardKey]) {
@@ -863,7 +862,7 @@
                     }
                 }
 
-                saveAndPushCloud();
+                saveAndPushCloud(); // Déclenche aussi le verrou anti-saut de 25s
                 updateNotificationsBanner();
                 refreshCurrentView();
                 renderMatrixTable();
@@ -1183,7 +1182,7 @@
 
         window.onload = function() {
             loadInitialState();
-            setInterval(syncWithCloud, 3000); // Vérification toutes les 3 secondes en arrière-plan
+            setInterval(syncWithCloud, 3000);
         }
     </script>
 </body>
