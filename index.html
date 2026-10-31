@@ -220,6 +220,25 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Barre de filtres et recherche pour l'onglet Équipe -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div class="flex items-center space-x-3 w-full sm:w-auto flex-wrap gap-y-2">
+                    <div class="relative flex-1 sm:w-64">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                        <input type="text" id="colleague-search" oninput="renderColleaguesCollectionTab()" placeholder="Rechercher..." class="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <select id="colleague-filter" onchange="renderColleaguesCollectionTab()" class="py-2 px-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <option value="all">Toutes (Afficher tout)</option>
+                        <option value="owned">Uniquement Possédées</option>
+                        <option value="missing">Uniquement Manquantes</option>
+                        <option value="duplicates">Uniquement avec Doublons</option>
+                        <option value="premium">Uniquement Premium (P1-P12)</option>
+                        <option value="normal">Uniquement Normales (1-108)</option>
+                    </select>
+                </div>
+            </div>
+
             <div id="colleague-cards-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
         </section>
     </main>
@@ -255,7 +274,7 @@
 
     <script>
         const GH_FILE = "database.json";
-        const WORKER_URL = "https://cartedisneysync.wiizko60.workers.dev"; // Ton URL Cloudflare Worker
+        const WORKER_URL = "https://cartedisneysync.wiizko60.workers.dev";
 
         let db = {
             currentUserName: null,
@@ -272,7 +291,6 @@
             db.cards[i.toString()] = { name: `Carte #${i}`, image: `${i}.png`, isPremium: false };
         }
 
-        // Chargement automatique et persistant des données partagées
         async function syncWithCloud() {
             try {
                 const response = await fetch(`${GH_FILE}?t=${Date.now()}`);
@@ -295,7 +313,6 @@
             } catch(e) {}
         }
 
-        // Sauvegarde automatique et en direct vers GitHub via le Worker Cloudflare
         async function saveAndPushCloud() {
             try {
                 const response = await fetch(WORKER_URL, {
@@ -436,6 +453,16 @@
                 }
             });
             document.getElementById(`tab-${tab}`).classList.remove('hidden');
+
+            // Si on arrive sur l'onglet Équipe, on sélectionne par défaut le profil de l'utilisateur connecté
+            if (tab === 'colleagues') {
+                const currentUser = getCurrentUser();
+                const selector = document.getElementById('colleague-selector');
+                if (currentUser && selector) {
+                    selector.value = currentUser.id;
+                }
+            }
+
             refreshCurrentView();
         }
 
@@ -516,17 +543,21 @@
             document.getElementById('my-missing-count').innerText = 120 - ownedCount;
         }
 
+        let isInitializedColleaguesDropdown = false;
         function initColleaguesCollectionTab() {
             const selector = document.getElementById('colleague-selector');
-            selector.innerHTML = '';
+            const currentUser = getCurrentUser();
             
+            selector.innerHTML = '';
             db.colleagues.forEach(c => {
-                selector.innerHTML += `<option value="${c.id}">${c.name} ${c.id === getCurrentUser().id ? '(Moi)' : ''}</option>`;
+                selector.innerHTML += `<option value="${c.id}">${c.name} ${c.id === currentUser.id ? '(Moi)' : ''}</option>`;
             });
 
-            if(!selector.value && db.colleagues.length > 0) {
-                selector.value = getCurrentUser().id;
+            // Par défaut, si rien n'est sélectionné ou si on vient d'arriver, on met l'utilisateur connecté
+            if (!selector.value || !db.colleagues.some(c => c.id === selector.value)) {
+                selector.value = currentUser.id;
             }
+
             renderColleaguesCollectionTab();
         }
 
@@ -536,11 +567,23 @@
             const targetCol = db.colleagues.find(c => c.id === targetId) || getCurrentUser();
             document.getElementById('colleague-banner-title').innerText = `Classeur de ${targetCol.name}`;
             
+            const grid = document.getElementById('colleague-cards-grid');
+            const search = document.getElementById('colleague-search').value.toLowerCase();
+            const filter = document.getElementById('colleague-filter').value;
+
             let html = '';
             getAllKeys().forEach(key => {
                 const card = db.cards[key];
+                if (!card) return;
                 const qty = targetCol.collection[key] || 0;
                 const isOwned = qty > 0;
+
+                if (search && !key.toLowerCase().includes(search) && !card.name.toLowerCase().includes(search)) return;
+                if (filter === 'owned' && !isOwned) return;
+                if (filter === 'missing' && isOwned) return;
+                if (filter === 'premium' && !card.isPremium) return;
+                if (filter === 'normal' && card.isPremium) return;
+
                 let cardStyle = isOwned ? (card.isPremium ? "card-premium-owned-glow" : "card-owned-glow bg-white dark:bg-slate-900") : "card-missing bg-white dark:bg-slate-900";
 
                 html += `<div onclick="openQtyModal('${targetCol.id}', '${key}')" class="${cardStyle} rounded-2xl p-3 border border-slate-200 dark:border-slate-800 cursor-pointer transition-all">
@@ -552,7 +595,7 @@
                     <h4 class="font-bold text-xs truncate">${card.name}</h4>
                 </div>`;
             });
-            document.getElementById('colleague-cards-grid').innerHTML = html;
+            grid.innerHTML = html;
         }
 
         function deleteSelectedColleague() {
@@ -685,8 +728,7 @@
 
         window.onload = function() {
             loadInitialState();
-            // Actualisation automatique toutes les 15 secondes pour voir les modifs des autres en direct
-            setInterval(syncWithCloud, 15000);
+            setInterval(syncWithCloud, 5000); // Réduit à 5 secondes comme demandé
         }
     </script>
 </body>
