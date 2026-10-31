@@ -14,7 +14,9 @@
       "id": "col_1793467126756",
       "name": "pierre",
       "avatar": "😎",
-      "collection": {},
+      "collection": {
+        "P3": 4
+      },
       "createdBy": "user"
     }
   ]
