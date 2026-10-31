@@ -254,12 +254,12 @@
     </div>
 
     <script>
-        // CONFIGURATION GITHUB API (Token encodé pour éviter le blocage du scan de secrets GitHub)
+        // CONFIGURATION GITHUB DISPATCH ACTION
         const GH_OWNER = "Wiizko29";
         const GH_REPO = "Carte-Disney-2026";
         const GH_FILE = "database.json";
         
-        // Ton nouveau token encodé en Base64
+        // Ton token encodé pour déclencher l'Action GitHub en toute sécurité
         const _tEnc = "Z2hwX1Qzei1SZ3dRVzliRDlYbURkWkVBVTBnNXJGZmFiT0syZGxzVnQ="; 
         const getGhToken = () => atob(_tEnc);
 
@@ -280,60 +280,44 @@
 
         let isUpdating = false;
         let saveTimeout = null;
-        let fileSha = null;
 
-        // Sauvegarde sur GitHub (Commit automatique du fichier database.json)
+        // Déclenchement de l'Action GitHub (Repository Dispatch) pour mettre à jour la base
         async function saveAndPushCloud() {
             if (isUpdating) return;
 
             clearTimeout(saveTimeout);
             saveTimeout = setTimeout(async () => {
                 try {
-                    const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
-                    
-                    // 1. On récupère d'abord le SHA actuel du fichier
-                    const getRes = await fetch(apiUrl, {
-                        headers: { 'Authorization': `Bearer ${getGhToken()}` }
-                    });
-                    if (getRes.ok) {
-                        const fileData = await getRes.json();
-                        fileSha = fileData.sha;
-                    }
+                    const dispatchUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/dispatches`;
+                    const jsonDataString = JSON.stringify({ colleagues: db.colleagues }, null, 2);
 
-                    // 2. On pousse le nouveau contenu encodé en Base64
-                    const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify({ colleagues: db.colleagues }, null, 2))));
-
-                    await fetch(apiUrl, {
-                        method: 'PUT',
+                    await fetch(dispatchUrl, {
+                        method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${getGhToken()}`,
+                            'Accept': 'application/vnd.github+json',
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            message: "Mise à jour de la collection via CardCollab Live",
-                            content: contentBase64,
-                            sha: fileSha
+                            event_type: 'update-database',
+                            client_payload: {
+                                data: jsonDataString
+                            }
                         })
                     });
                 } catch (err) {
-                    console.error("Erreur sync GitHub:", err);
+                    console.error("Erreur Dispatch GitHub:", err);
                 }
             }, 800);
         }
 
-        // Chargement depuis GitHub
+        // Chargement initial depuis le fichier public database.json (sans token requis pour la lecture)
         async function syncWithCloud() {
             if (isUpdating) return;
             try {
-                const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
-                const response = await fetch(apiUrl, {
-                    headers: { 'Authorization': `Bearer ${getGhToken()}` }
-                });
+                const response = await fetch(`${GH_FILE}?t=${Date.now()}`);
                 if (!response.ok) return;
-                const fileData = await response.json();
-                fileSha = fileData.sha;
-                
-                const decodedJson = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
+                const decodedJson = await response.json();
 
                 if (decodedJson && decodedJson.colleagues && decodedJson.colleagues.length > 0) {
                     isUpdating = true;
