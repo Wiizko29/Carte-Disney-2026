@@ -28,7 +28,7 @@
       "name": "pierre",
       "avatar": "😎",
       "collection": {
-        "16": 3
+        "16": 2
       },
       "createdBy": "user"
     }
@@ -71,7 +71,7 @@
       "from": "julie",
       "to": "pierre",
       "cardKey": "16",
-      "resolved": false,
+      "resolved": true,
       "date": "31/10/2026"
     }
   ]
