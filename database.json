@@ -135,6 +135,14 @@
       "cardKey": "2",
       "resolved": true,
       "date": "31/10/2026"
+    },
+    {
+      "id": "req_1793488081525",
+      "from": "julie",
+      "to": "Basile",
+      "cardKey": "P2",
+      "resolved": false,
+      "date": "01/11/2026"
     }
   ]
 }
