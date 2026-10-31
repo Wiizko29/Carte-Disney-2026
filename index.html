@@ -255,7 +255,7 @@
 
     <script>
         const STORAGE_URL = "https://api.npoint.io/27b5e13b9e86549de402";
-        const LOCAL_STORAGE_KEY = "collabcards_secure_db_v18";
+        const LOCAL_STORAGE_KEY = "collabcards_secure_db_v19";
 
         let db = {
             currentUserName: null,
@@ -265,8 +265,9 @@
             cards: {}
         };
 
+        // Utilisation de premium.png pour les cartes premium par défaut
         for (let i = 1; i <= 12; i++) {
-            db.cards[`P${i}`] = { name: `Carte Premium #${i}`, image: `P${i}.png`, isPremium: true };
+            db.cards[`P${i}`] = { name: `Carte Premium #${i}`, image: `premium.png`, isPremium: true };
         }
         for (let i = 1; i <= 108; i++) {
             db.cards[i.toString()] = { name: `Carte #${i}`, image: `${i}.png`, isPremium: false };
@@ -292,7 +293,6 @@
                 const remoteData = await response.json();
                 if (remoteData && remoteData.colleagues && remoteData.colleagues.length > 0) {
                     isUpdating = true;
-                    // Fusion sécurisée : on garde l'intégralité des profils locaux et distants
                     let mergedColleagues = [...db.colleagues];
                     remoteData.colleagues.forEach(remoteCol => {
                         let existing = mergedColleagues.find(c => c.name.toLowerCase() === remoteCol.name.toLowerCase());
@@ -531,13 +531,10 @@
                     cardStyle = isOwned ? "card-owned-glow bg-white dark:bg-slate-900" : "card-missing bg-white dark:bg-slate-900";
                 }
                 
-                // Image de secours dynamique si le fichier image n'existe pas encore
-                const fallbackImg = `https://placehold.co/300x400/1e293b/22c55e?text=${encodeURIComponent(card.isPremium ? '✨ ' + key : '#' + key)}`;
-
                 html += `<div onclick="openQtyModal('${user.id}', '${key}')" class="${cardStyle} rounded-2xl p-3 border border-slate-200 dark:border-slate-800 flex flex-col justify-between cursor-pointer select-none transition-all">
                     <div>
                         <div class="relative aspect-[3/4] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-950 mb-2 border border-slate-200 dark:border-slate-800">
-                            <img src="${card.image}" onerror="this.onerror=null; this.src='${fallbackImg}';" class="w-full h-full object-cover">
+                            <img src="${card.image}" onerror="this.src='https://placehold.co/300x400/1e293b/22c55e?text=Card+${key}'" class="w-full h-full object-cover">
                             <span class="absolute top-2 left-2 ${card.isPremium ? 'card-premium-badge text-white font-bold' : 'bg-slate-900/80 text-white'} text-[10px] px-2 py-0.5 rounded-md">${card.isPremium ? '✨ P' + key : '#' + key}</span>
                             ${qty > 0 ? `<span class="absolute top-2 right-2 bg-indigo-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">${qty} ex.</span>` : ''}
                         </div>
@@ -577,11 +574,9 @@
                 const isOwned = qty > 0;
                 let cardStyle = isOwned ? (card.isPremium ? "card-premium-owned-glow" : "card-owned-glow bg-white dark:bg-slate-900") : "card-missing bg-white dark:bg-slate-900";
 
-                const fallbackImg = `https://placehold.co/300x400/1e293b/22c55e?text=${encodeURIComponent(card.isPremium ? '✨ ' + key : '#' + key)}`;
-
                 html += `<div onclick="openQtyModal('${targetCol.id}', '${key}')" class="${cardStyle} rounded-2xl p-3 border border-slate-200 dark:border-slate-800 cursor-pointer transition-all">
                     <div class="relative aspect-[3/4] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-950 mb-2 border border-slate-200 dark:border-slate-800">
-                        <img src="${card.image}" onerror="this.onerror=null; this.src='${fallbackImg}';" class="w-full h-full object-cover">
+                        <img src="${card.image}" onerror="this.src='https://placehold.co/300x400/1e293b/22c55e?text=Card+${key}'" class="w-full h-full object-cover">
                         <span class="absolute top-2 left-2 ${card.isPremium ? 'card-premium-badge text-white font-bold' : 'bg-slate-900/80 text-white'} text-[10px] px-2 py-0.5 rounded-md">${card.isPremium ? '✨ P' + key : '#' + key}</span>
                         ${qty > 0 ? `<span class="absolute top-2 right-2 bg-indigo-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">${qty} ex.</span>` : ''}
                     </div>
