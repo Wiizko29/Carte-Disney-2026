@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CardCollab - Gestionnaire de Collection Live</title>
+    <title>Cart'Collect 2026</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -74,12 +74,12 @@
                 <i class="fa-solid fa-id-card"></i>
             </div>
             <div>
-                <h3 class="text-xl font-extrabold">Bienvenue sur CardCollab !</h3>
-                <p class="text-xs text-slate-500 mt-1">Entre ton pseudo pour te connecter (ex: Basile, Pierre...) :</p>
+                <h3 class="text-xl font-extrabold">Bienvenue sur Cart'Collect !</h3>
+                <p class="text-xs text-slate-500 mt-1">Entre ton prénom ou ton pseudo pour te connecter:</p>
             </div>
             <div class="space-y-3">
-                <input type="text" id="welcome-name-input" placeholder="Ton pseudo..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none text-center">
-                <button onclick="registerFirstUser()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-emerald-600/30 transition">C'est parti ! 🚀</button>
+                <input type="text" id="welcome-name-input" placeholder="Ton prénom/pseudo..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none text-center">
+                <button onclick="registerFirstUser()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-emerald-600/30 transition">C'est parti !</button>
             </div>
         </div>
     </div>
@@ -107,7 +107,7 @@
             <div class="space-y-3">
                 <button onclick="closeModal('profile-modal'); openRequestsModal();" class="w-full py-3.5 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2.5 px-4">
                     <i class="fa-solid fa-bell text-sm"></i>
-                    <span>Voir les demandes d'échange reçues</span>
+                    <span>Voir les notifications d'échange reçues</span>
                     <span id="profile-modal-badge" class="hidden bg-red-600 text-white text-[11px] font-extrabold px-2.5 py-0.5 rounded-full shadow-md ml-auto border border-white/20">0</span>
                 </button>
             </div>
@@ -122,7 +122,7 @@
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2 text-orange-600 dark:text-orange-400 font-extrabold text-base">
                     <i class="fa-solid fa-bell"></i>
-                    <span>Demandes d'échange des collègues</span>
+                    <span>Vos notifications</span>
                 </div>
                 <button onclick="closeModal('requests-modal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
             </div>
@@ -142,7 +142,7 @@
             </div>
             <div>
                 <h3 class="text-xl font-extrabold">Demande envoyée !</h3>
-                <p id="request-success-text" class="text-xs text-slate-500 mt-2">Ta demande a bien été transmise à ton collègue. Il la verra dès sa prochaine connexion.</p>
+                <p id="request-success-text" class="text-xs text-slate-500 mt-2">Ta demande a bien été transmise à ton collègue.</p>
             </div>
             <button onclick="closeModal('request-success-modal')" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-2xl shadow-md transition">Super, merci !</button>
         </div>
@@ -186,7 +186,7 @@
                     <img id="header-avatar-img" src="" class="w-full h-full object-cover hidden">
                 </div>
                 <div>
-                    <h1 class="font-extrabold text-base tracking-tight bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">CollabCards Live</h1>
+                    <h1 class="font-extrabold text-base tracking-tight bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">Cart'Collect</h1>
                     <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Connecté : <span class="font-bold text-emerald-600 dark:text-emerald-400" id="header-user-name">-</span></p>
                 </div>
             </div>
@@ -240,10 +240,10 @@
         <div id="notifications-banner" class="hidden bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl p-4 text-white shadow-md flex items-center justify-between gap-4">
             <div class="flex items-center space-x-3">
                 <i class="fa-solid fa-bell text-lg animate-bounce"></i>
-                <span class="text-xs sm:text-sm font-bold">Vous avez de nouvelles demandes d'échange de vos collègues !</span>
+                <span class="text-xs sm:text-sm font-bold">Vous avez de nouvelles notifications de vos collègues !</span>
             </div>
             <button onclick="openRequestsModal()" class="px-4 py-2 bg-white text-orange-600 text-xs font-extrabold rounded-xl hover:bg-orange-50 transition shadow-sm flex-shrink-0">
-                Voir les demandes
+                Voir les notifications
             </button>
         </div>
 
@@ -255,7 +255,7 @@
                         <i class="fa-solid fa-shield-halved"></i> <span>Mode Administrateur (Basile)</span>
                     </div>
                     <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight" id="mycollection-title">Mon Classeur de Cartes</h2>
-                    <p class="text-emerald-200/80 text-xs sm:text-sm mt-1">24 cartes Premium (P1-P24) en premier, suivies des 108 cartes normales.</p>
+                    <p class="text-emerald-200/80 text-xs sm:text-sm mt-1">24 cartes Fixeez (F1-F24) en premier, suivies des 108 cartes normales.</p>
                 </div>
                 <div class="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 flex items-center space-x-6">
                     <div class="text-center">
@@ -277,11 +277,11 @@
                         <input type="text" id="my-search" oninput="renderMyCollection()" placeholder="Rechercher..." class="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <select id="my-filter" onchange="renderMyCollection()" class="py-2 px-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                        <option value="all">Toutes (Afficher tout)</option>
+                        <option value="all">Afficher tout</option>
                         <option value="owned">Uniquement Possédées</option>
                         <option value="missing">Uniquement Manquantes</option>
                         <option value="duplicates">Uniquement avec Doublons</option>
-                        <option value="premium">Uniquement Premium (P1-P24)</option>
+                        <option value="premium">Uniquement Premium (F1-F24)</option>
                         <option value="normal">Uniquement Normales (1-108)</option>
                     </select>
                 </div>
@@ -307,7 +307,7 @@
         <section id="tab-exchanges" class="hidden space-y-6">
             <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h2 class="text-2xl font-extrabold tracking-tight">Bourse aux Doublons de l'Équipe</h2>
+                    <h2 class="text-2xl font-extrabold tracking-tight">Zone des Doublons de l'Équipe</h2>
                     <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">Retrouvez les doublons de chaque collègue. Cliquez sur une carte pour l'agrandir ou demandez un doublon !</p>
                 </div>
             </div>
@@ -364,11 +364,11 @@
                         <input type="text" id="colleague-search" oninput="renderColleaguesCollectionTab()" placeholder="Rechercher..." class="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <select id="colleague-filter" onchange="renderColleaguesCollectionTab()" class="py-2 px-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                        <option value="all">Toutes (Afficher tout)</option>
+                        <option value="all">Afficher tout</option>
                         <option value="owned">Uniquement Possédées</option>
                         <option value="missing">Uniquement Manquantes</option>
                         <option value="duplicates">Uniquement avec Doublons</option>
-                        <option value="premium">Uniquement Premium (P1-P24)</option>
+                        <option value="premium">Uniquement Premium (F1-F24)</option>
                         <option value="normal">Uniquement Normales (1-108)</option>
                     </select>
                 </div>
@@ -866,7 +866,7 @@
                                 Refuser ❌
                             </button>
                             <button onclick="resolveRequest('${req.id}', '${req.to}', '${req.cardKey}', 'accepted')" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition shadow-sm">
-                                Valider 👍 (-1 ex.)
+                                Valider 👍
                             </button>
                         </div>
                     </div>`;
