@@ -105,10 +105,10 @@
             </div>
 
             <div class="space-y-3">
-                <button onclick="closeModal('profile-modal'); openRequestsModal();" class="w-full py-3 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2 relative">
-                    <i class="fa-solid fa-bell"></i>
+                <button onclick="closeModal('profile-modal'); openRequestsModal();" class="w-full py-3.5 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2.5 px-4">
+                    <i class="fa-solid fa-bell text-sm"></i>
                     <span>Voir les demandes d'échange reçues</span>
-                    <span id="profile-modal-badge" class="hidden absolute right-3 bg-red-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">0</span>
+                    <span id="profile-modal-badge" class="hidden bg-red-600 text-white text-[11px] font-extrabold px-2.5 py-0.5 rounded-full shadow-md ml-auto border border-white/20">0</span>
                 </button>
             </div>
 
@@ -680,7 +680,7 @@
             }
             document.getElementById('profile-avatar-file').value = '';
 
-            // Met à jour le badge du bouton Mon Profil
+            // Met à jour le badge bien visible dans le modal de profil
             const profileModalBadge = document.getElementById('profile-modal-badge');
             if (!db.requests) db.requests = [];
             const myRequests = db.requests.filter(r => r.to.toLowerCase() === user.name.toLowerCase() && !r.resolved);
@@ -799,7 +799,7 @@
                 exchangeBadge.innerText = myRequests.length;
                 exchangeBadge.classList.remove('hidden');
                 profileBadge.innerText = myRequests.length;
-                profileBadge.classList.add('hidden'); // On gère le badge du profil dans openProfileModal
+                profileBadge.classList.remove('hidden'); // Restauré pour le bouton Mon Profil dans le header !
                 banner.classList.remove('hidden');
             } else {
                 exchangeBadge.classList.add('hidden');
@@ -862,10 +862,10 @@
                             <strong>${req.from}</strong> aimerait récupérer ton doublon de <strong>${cardName}</strong> (${req.cardKey.startsWith('P') ? 'Premium' : '#' + req.cardKey}).
                         </div>
                         <div class="flex items-center justify-end space-x-2">
-                            <button onclick="resolveRequest('${req.id}', '${req.to}', '${req.cardKey}', 'refused')" class="px-3.5 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition shadow-sm">
+                            <button onclick="resolveRequest('${req.id}', '${req.to}', '${req.cardKey}', 'refused')" class="px-3 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition shadow-sm">
                                 Refuser ❌
                             </button>
-                            <button onclick="resolveRequest('${req.id}', '${req.to}', '${req.cardKey}', 'accepted')" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition shadow-sm">
+                            <button onclick="resolveRequest('${req.id}', '${req.to}', '${req.cardKey}', 'accepted')" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition shadow-sm">
                                 Valider 👍 (-1 ex.)
                             </button>
                         </div>
