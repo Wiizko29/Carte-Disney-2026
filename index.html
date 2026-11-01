@@ -399,7 +399,6 @@
     </div>
 
     <script>
-        const GH_FILE = "database.json";
         const WORKER_URL = "https://cartedisneysync.wiizko60.workers.dev";
 
         let db = {
@@ -423,7 +422,7 @@
 
         async function syncWithCloud() {
             try {
-                const response = await fetch(`${GH_FILE}?t=${Date.now()}`);
+                const response = await fetch(`${WORKER_URL}?t=${Date.now()}`);
                 if (!response.ok) return;
                 const remoteData = await response.json();
 
@@ -847,7 +846,6 @@
             if (!db.requests) return;
             const req = db.requests.find(r => r.id === reqId);
             if (req) {
-                // On retire définitivement la demande de la liste locale immédiatement
                 db.requests = db.requests.filter(r => r.id !== reqId);
 
                 const owner = db.colleagues.find(c => c.name.toLowerCase() === ownerName.toLowerCase());
@@ -1178,7 +1176,6 @@
 
         window.onload = function() {
             loadInitialState();
-            // Plus de setInterval automatique en arrière-plan qui vient perturber l'affichage !
         }
     </script>
 </body>
