@@ -105,10 +105,12 @@
             </div>
 
             <div class="space-y-3">
-                <button onclick="closeModal('profile-modal'); openRequestsModal();" class="w-full py-3.5 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2.5 px-4">
-                    <i class="fa-solid fa-bell text-sm"></i>
-                    <span>Voir les notifications d'échange reçues</span>
-                    <span id="profile-modal-badge" class="hidden bg-red-600 text-white text-[11px] font-extrabold px-2.5 py-0.5 rounded-full shadow-md ml-auto border border-white/20">0</span>
+                <button onclick="closeModal('profile-modal'); openRequestsModal();" class="w-full py-3.5 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-between px-4">
+                    <div class="flex items-center space-x-2.5">
+                        <i class="fa-solid fa-bell text-sm"></i>
+                        <span>Voir les notifications d'échange reçues</span>
+                    </div>
+                    <span id="profile-modal-badge" class="hidden bg-red-600 text-white text-[11px] font-extrabold px-2.5 py-0.5 rounded-full shadow-md border border-white/20">0</span>
                 </button>
             </div>
 
@@ -431,11 +433,30 @@
         let selectedColleagueIdForTab = null;
         let tempAvatarBase64 = null;
 
+        // Dictionnaires personnalisables pour les noms de cartes
+        const customFixeezNames = {
+            // "F1": "Nom personnalisé Fixeez #1",
+        };
+
+        const customNormalNames = {
+            // "1": "Nom personnalisé Normal #1",
+        };
+
         for (let i = 1; i <= 24; i++) {
-            db.cards[`P${i}`] = { name: `Carte Premium #${i}`, image: `premium.png`, isPremium: true };
+            let key = `F${i}`;
+            db.cards[key] = { 
+                name: customFixeezNames[key] || `Carte Fixeez #${i}`, 
+                image: `premium.png`, 
+                isPremium: true 
+            };
         }
         for (let i = 1; i <= 108; i++) {
-            db.cards[i.toString()] = { name: `Carte #${i}`, image: `${i}.png`, isPremium: false };
+            let key = i.toString();
+            db.cards[key] = { 
+                name: customNormalNames[key] || `Carte #${i}`, 
+                image: `${i}.png`, 
+                isPremium: false 
+            };
         }
 
         async function syncWithCloud() {
@@ -658,7 +679,7 @@
 
         function getAllKeys() {
             let keys = [];
-            for (let i = 1; i <= 24; i++) keys.push(`P${i}`);
+            for (let i = 1; i <= 24; i++) keys.push(`F${i}`);
             for (let i = 1; i <= 108; i++) keys.push(i.toString());
             return keys;
         }
@@ -680,7 +701,6 @@
             }
             document.getElementById('profile-avatar-file').value = '';
 
-            // Met à jour le badge bien visible dans le modal de profil
             const profileModalBadge = document.getElementById('profile-modal-badge');
             if (!db.requests) db.requests = [];
             const myRequests = db.requests.filter(r => r.to.toLowerCase() === user.name.toLowerCase() && !r.resolved);
@@ -765,7 +785,7 @@
 
             db.requests.push({
                 id: 'req_' + Date.now(),
-                type: 'request', // Demande classique de doublon
+                type: 'request',
                 from: currentUser.name,
                 to: ownerName,
                 cardKey: cardKey,
@@ -799,7 +819,7 @@
                 exchangeBadge.innerText = myRequests.length;
                 exchangeBadge.classList.remove('hidden');
                 profileBadge.innerText = myRequests.length;
-                profileBadge.classList.remove('hidden'); // Restauré pour le bouton Mon Profil dans le header !
+                profileBadge.classList.remove('hidden');
                 banner.classList.remove('hidden');
             } else {
                 exchangeBadge.classList.add('hidden');
@@ -832,7 +852,6 @@
                 const cardName = card ? card.name : `Carte #${req.cardKey}`;
 
                 if (req.type === 'response_accepted') {
-                    // Notification reçue par le demandeur initial quand le propriétaire a accepté
                     html += `<div class="bg-emerald-50 dark:bg-emerald-950/30 p-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-800 flex flex-col gap-3 text-xs">
                         <div>
                             <strong>${req.from}</strong> a accepté ta demande pour la carte <strong>${cardName}</strong>, une fois que tu auras validé la carte sera rajoutée automatiquement à ton classeur.
@@ -844,7 +863,6 @@
                         </div>
                     </div>`;
                 } else if (req.type === 'response_refused') {
-                    // Notification reçue par le demandeur initial quand le propriétaire a refusé
                     html += `<div class="bg-red-50 dark:bg-red-950/30 p-3.5 rounded-2xl border border-red-200 dark:border-red-800 flex flex-col gap-3 text-xs">
                         <div>
                             Ta demande auprès de <strong>${req.from}</strong> pour la carte <strong>${cardName}</strong> a été refusée.
@@ -856,10 +874,9 @@
                         </div>
                     </div>`;
                 } else {
-                    // Demande initiale de doublon reçue par le propriétaire
                     html += `<div class="bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-3 text-xs">
                         <div>
-                            <strong>${req.from}</strong> aimerait récupérer ton doublon de <strong>${cardName}</strong> (${req.cardKey.startsWith('P') ? 'Premium' : '#' + req.cardKey}).
+                            <strong>${req.from}</strong> aimerait récupérer ton doublon de <strong>${cardName}</strong> (${req.cardKey.startsWith('F') ? 'Fixeez' : '#' + req.cardKey}).
                         </div>
                         <div class="flex items-center justify-end space-x-2">
                             <button onclick="resolveRequest('${req.id}', '${req.to}', '${req.cardKey}', 'refused')" class="px-3 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition shadow-sm">
@@ -884,7 +901,6 @@
                 const cardName = card ? card.name : `Carte #${cardKey}`;
 
                 if (action === 'accepted') {
-                    // 1. Retire immédiatement la carte du classeur du propriétaire
                     const owner = db.colleagues.find(c => c.name.toLowerCase() === ownerName.toLowerCase());
                     if (owner && owner.collection[cardKey]) {
                         owner.collection[cardKey] -= 1;
@@ -893,7 +909,6 @@
                         }
                     }
 
-                    // 2. Envoie la notification de réponse acceptée au demandeur
                     db.requests.push({
                         id: 'req_resp_' + Date.now(),
                         type: 'response_accepted',
@@ -904,12 +919,10 @@
                         date: new Date().toLocaleDateString()
                     });
 
-                    // Pop-up du milieu de confirmation d'échange
                     document.getElementById('exchange-confirmation-text').innerText = `Merci pour ton échange, la carte ${cardName} a été retiré de ton classeur automatiquement`;
                     document.getElementById('exchange-confirmation-modal').classList.remove('hidden');
 
                 } else {
-                    // Envoie la notification de réponse refusée au demandeur
                     db.requests.push({
                         id: 'req_resp_' + Date.now(),
                         type: 'response_refused',
@@ -927,8 +940,6 @@
                 updateNotificationsBanner();
                 refreshCurrentView();
                 renderMatrixTable();
-                
-                // Actualise la liste du modal sans le fermer pour traiter la suite
                 updateModalRequestsList();
             }
         }
@@ -939,7 +950,6 @@
                 req.resolved = true;
 
                 if (action === 'claimed') {
-                    // Ajoute la carte au classeur de la personne qui avait fait la demande initiale
                     const currentUser = getCurrentUser();
                     if (currentUser) {
                         if (!currentUser.collection) currentUser.collection = {};
@@ -964,7 +974,7 @@
             const badge = document.getElementById('zoom-card-badge');
             if (card.isPremium) {
                 badge.className = "card-premium-badge text-white text-xs font-bold px-3 py-1 rounded-full";
-                badge.innerText = `✨ Carte Premium ${key}`;
+                badge.innerText = `✨ Carte Fixeez ${key}`;
             } else {
                 badge.className = "bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full";
                 badge.innerText = `Carte Normale #${key}`;
@@ -1019,7 +1029,7 @@
                             </div>
                             <div>
                                 <div class="flex items-center space-x-2">
-                                    <span class="${badgeClass} text-[10px] font-bold px-2 py-0.5 rounded-md">${card.isPremium ? '✨ P' + key : '#' + key}</span>
+                                    <span class="${badgeClass} text-[10px] font-bold px-2 py-0.5 rounded-md">${card.isPremium ? '✨ ' + key : '#' + key}</span>
                                     <h4 class="font-bold text-xs">${card.name}</h4>
                                 </div>
                             </div>
@@ -1050,7 +1060,7 @@
                         <div>
                             <div onclick="openQtyModal('${targetCol.id}', '${key}')" class="relative aspect-[3/4] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-950 mb-2 border border-slate-200 dark:border-slate-800 cursor-pointer">
                                 <img src="${card.image}" class="w-full h-full object-cover">
-                                <span class="absolute top-2 left-2 ${card.isPremium ? 'card-premium-badge text-white font-bold' : 'bg-slate-900/80 text-white'} text-[10px] px-2 py-0.5 rounded-md">${card.isPremium ? '✨ P' + key : '#' + key}</span>
+                                <span class="absolute top-2 left-2 ${card.isPremium ? 'card-premium-badge text-white font-bold' : 'bg-slate-900/80 text-white'} text-[10px] px-2 py-0.5 rounded-md">${card.isPremium ? '✨ ' + key : '#' + key}</span>
                                 ${qty > 0 ? `<span class="absolute top-2 right-2 bg-indigo-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">${qty} ex.</span>` : ''}
                             </div>
                             <h4 onclick="openQtyModal('${targetCol.id}', '${key}')" class="font-bold text-xs truncate cursor-pointer">${card.name}</h4>
@@ -1142,7 +1152,7 @@
             const card = db.cards[key];
             if (card.isPremium) {
                 badge.className = "card-premium-badge text-white text-xs font-bold px-3 py-1 rounded-full";
-                badge.innerText = `✨ Carte Premium ${key}`;
+                badge.innerText = `✨ Carte Fixeez ${key}`;
             } else {
                 badge.className = "bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full";
                 badge.innerText = `Carte Normale #${key}`;
@@ -1206,7 +1216,7 @@
                     
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center space-x-2 mb-1">
-                            <span class="${badgeClass} text-[10px] font-bold px-2 py-0.5 rounded-md">${card.isPremium ? '✨ P' + key : '#' + key}</span>
+                            <span class="${badgeClass} text-[10px] font-bold px-2 py-0.5 rounded-md">${card.isPremium ? '✨ ' + key : '#' + key}</span>
                             <h4 onclick="zoomCard('${key}')" class="font-extrabold text-sm truncate cursor-pointer hover:text-emerald-500 transition">${card.name}</h4>
                         </div>
                         <p class="text-[11px] text-slate-400 mb-2">Doublons disponibles :</p>
