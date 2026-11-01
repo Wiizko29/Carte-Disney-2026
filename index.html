@@ -84,7 +84,7 @@
         </div>
     </div>
 
-    <!-- MODAL GÉRER MON PROFIL & DEMANDES -->
+    <!-- MODAL GÉRER MON PROFIL -->
     <div id="profile-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6 text-center max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div class="flex items-center justify-between">
@@ -145,6 +145,20 @@
                 <p id="request-success-text" class="text-xs text-slate-500 mt-2">Ta demande a bien été transmise à ton collègue. Il la verra dès sa prochaine connexion.</p>
             </div>
             <button onclick="closeModal('request-success-modal')" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-2xl shadow-md transition">Super, merci !</button>
+        </div>
+    </div>
+
+    <!-- MODAL POPUP POP-UP DU MILIEU (CONFIRMATION ÉCHANGE) -->
+    <div id="exchange-confirmation-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-5 text-center">
+            <div class="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-3xl mx-auto shadow-inner">
+                <i class="fa-solid fa-handshake"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-extrabold">Échange validé !</h3>
+                <p id="exchange-confirmation-text" class="text-xs text-slate-500 mt-2">Merci pour ton échange, la carte a été retirée de ton classeur automatiquement.</p>
+            </div>
+            <button onclick="closeModal('exchange-confirmation-modal')" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-2xl shadow-md transition">Compris !</button>
         </div>
     </div>
 
@@ -756,6 +770,7 @@
 
             db.requests.push({
                 id: 'req_' + Date.now(),
+                type: 'request', // Demande initiale de doublon
                 from: currentUser.name,
                 to: ownerName,
                 cardKey: cardKey,
@@ -820,19 +835,47 @@
             myRequests.forEach(req => {
                 const card = db.cards[req.cardKey];
                 const cardName = card ? card.name : `Carte #${req.cardKey}`;
-                html += `<div class="bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-3 text-xs">
-                    <div>
-                        <strong>${req.from}</strong> aimerait récupérer ton doublon de <strong>${cardName}</strong> (${req.cardKey.startsWith('P') ? 'Premium' : '#' + req.cardKey}).
-                    </div>
-                    <div class="flex items-center justify-end space-x-2">
-                        <button onclick="resolveRequest('${req.id}', '${req.to}', '${req.cardKey}', 'refused')" class="px-3 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition shadow-sm">
-                            Refuser ❌
-                        </button>
-                        <button onclick="resolveRequest('${req.id}', '${req.to}', '${req.cardKey}', 'accepted')" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition shadow-sm">
-                            Valider 👍 (-1 ex.)
-                        </button>
-                    </div>
-                </div>`;
+                
+                if (req.type === 'response_accepted') {
+                    // Notification d'acceptation reçue par le demandeur initial, qui doit valider pour l'ajouter à son classeur
+                    html += `<div class="bg-emerald-50 dark:bg-emerald-950/30 p-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-800 flex flex-col gap-3 text-xs">
+                        <div>
+                            <strong>${req.from}</strong> a accepté ta demande pour la carte <strong>${cardName}</strong>. Valide pour l'ajouter automatiquement à ton classeur !
+                        </div>
+                        <div class="flex items-center justify-end space-x-2">
+                            <button onclick="resolveResponseRequest('${req.id}', '${req.cardKey}', 'claimed')" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition shadow-sm">
+                                Valider et ajouter au classeur ✅
+                            </button>
+                        </div>
+                    </div>`;
+                } else if (req.type === 'response_refused') {
+                    // Notification de refus
+                    html += `<div class="bg-red-50 dark:bg-red-950/30 p-3.5 rounded-2xl border border-red-200 dark:border-red-800 flex flex-col gap-3 text-xs">
+                        <div>
+                            Ta demande auprès de <strong>${req.from}</strong> pour la carte <strong>${cardName}</strong> a été refusée.
+                        </div>
+                        <div class="flex items-center justify-end">
+                            <button onclick="resolveResponseRequest('${req.id}', '${req.cardKey}', 'dismissed')" class="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 text-xs font-bold rounded-xl transition">
+                                Ok / Supprimer
+                            </button>
+                        </div>
+                    </div>`;
+                } else {
+                    // Demande initiale de doublon reçue par le propriétaire
+                    html += `<div class="bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-3 text-xs">
+                        <div>
+                            <strong>${req.from}</strong> aimerait récupérer ton doublon de <strong>${cardName}</strong> (${req.cardKey.startsWith('P') ? 'Premium' : '#' + req.cardKey}).
+                        </div>
+                        <div class="flex items-center justify-end space-x-2">
+                            <button onclick="resolveRequest('${req.id}', '${req.to}', '${req.cardKey}', 'refused')" class="px-3 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition shadow-sm">
+                                Refuser ❌
+                            </button>
+                            <button onclick="resolveRequest('${req.id}', '${req.to}', '${req.cardKey}', 'accepted')" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition shadow-sm">
+                                Valider 👍 (-1 ex.)
+                            </button>
+                        </div>
+                    </div>`;
+                }
             });
             listEl.innerHTML = html;
         }
@@ -845,10 +888,8 @@
                 const card = db.cards[cardKey];
                 const cardName = card ? card.name : `Carte #${cardKey}`;
 
-                if (!db.notifications) db.notifications = [];
-
                 if (action === 'accepted') {
-                    // Retire un exemplaire au possesseur (propriétaire de la carte)
+                    // 1. Retire immédiatement un exemplaire au possesseur (propriétaire)
                     const owner = db.colleagues.find(c => c.name.toLowerCase() === ownerName.toLowerCase());
                     if (owner && owner.collection[cardKey]) {
                         owner.collection[cardKey] -= 1;
@@ -857,27 +898,31 @@
                         }
                     }
 
-                    // Ajoute automatiquement la carte au demandeur
-                    const requester = db.colleagues.find(c => c.name.toLowerCase() === req.from.toLowerCase());
-                    if (requester) {
-                        if (!requester.collection) requester.collection = {};
-                        requester.collection[cardKey] = (requester.collection[cardKey] || 0) + 1;
-                    }
-
-                    // Notification pour le demandeur
-                    db.notifications.push({
-                        id: 'notif_' + Date.now(),
-                        targetUser: req.from,
-                        message: `${ownerName} a accepté ta demande pour la carte ${cardName}, une fois que tu auras validé la carte sera rajoutée automatiquement à ton classeur.`
+                    // 2. Crée une nouvelle requête de type "response_accepted" adressée au demandeur initial pour qu'il valide l'ajout
+                    db.requests.push({
+                        id: 'req_resp_' + Date.now(),
+                        type: 'response_accepted',
+                        from: ownerName,       // C'est le propriétaire qui notifie
+                        to: req.from,         // Destinataire = le demandeur initial
+                        cardKey: cardKey,
+                        resolved: false,
+                        date: new Date().toLocaleDateString()
                     });
 
-                    showToast(`Merci pour ton échange, la carte ${cardName} a été retirée de ton classeur automatiquement.`);
+                    // Pop-up du milieu (Confirmation d'échange)
+                    document.getElementById('exchange-confirmation-text').innerText = `Merci pour ton échange, la carte ${cardName} a été retirée de ton classeur automatiquement.`;
+                    document.getElementById('exchange-confirmation-modal').classList.remove('hidden');
+
                 } else {
-                    // Notification de refus pour le demandeur
-                    db.notifications.push({
-                        id: 'notif_' + Date.now(),
-                        targetUser: req.from,
-                        message: `Ta demande auprès de ${ownerName} pour la carte ${cardName} a été refusée.`
+                    // Crée une requête de type "response_refused"
+                    db.requests.push({
+                        id: 'req_resp_' + Date.now(),
+                        type: 'response_refused',
+                        from: ownerName,
+                        to: req.from,
+                        cardKey: cardKey,
+                        resolved: false,
+                        date: new Date().toLocaleDateString()
                     });
 
                     showToast("Demande refusée.");
@@ -888,24 +933,35 @@
                 refreshCurrentView();
                 renderMatrixTable();
                 
-                // Actualise la liste du modal sans le fermer pour permettre de traiter les suivantes
+                // Actualise la liste du modal sans le fermer pour traiter la suite
+                updateModalRequestsList();
+            }
+        }
+
+        function resolveResponseRequest(reqId, cardKey, action) {
+            const req = db.requests.find(r => r.id === reqId);
+            if (req) {
+                req.resolved = true;
+
+                if (action === 'claimed') {
+                    // Ajoute la carte au classeur de la personne qui avait fait la demande
+                    const currentUser = getCurrentUser();
+                    if (currentUser) {
+                        if (!currentUser.collection) currentUser.collection = {};
+                        currentUser.collection[cardKey] = (currentUser.collection[cardKey] || 0) + 1;
+                    }
+                    showToast("Carte ajoutée automatiquement à ton classeur !");
+                }
+
+                saveAndPushCloud();
+                updateNotificationsBanner();
+                refreshCurrentView();
                 updateModalRequestsList();
             }
         }
 
         function checkPersonalNotifications() {
-            const currentUser = getCurrentUser();
-            if (!currentUser || !db.notifications) return;
-
-            let myNotifs = db.notifications.filter(n => n.targetUser.toLowerCase() === currentUser.name.toLowerCase());
-            if (myNotifs.length > 0) {
-                myNotifs.forEach(n => {
-                    showToast(n.message);
-                });
-                // Supprimer les notifications lues de la liste globale
-                db.notifications = db.notifications.filter(n => n.targetUser.toLowerCase() !== currentUser.name.toLowerCase());
-                saveAndPushCloud();
-            }
+            // Géré dynamiquement via les requêtes directes destinées à `to: currentUser.name`
         }
 
         function zoomCard(key) {
