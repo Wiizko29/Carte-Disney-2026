@@ -425,7 +425,6 @@
                 { id: "col_basile", name: "Basile", avatar: "👑", collection: {}, createdBy: "admin" }
             ],
             requests: [],
-            notifications: [], // Pour stocker les retours (accepté / refusé)
             cards: {}
         };
 
@@ -462,12 +461,8 @@
                     if (remoteData.requests) {
                         db.requests = remoteData.requests;
                     }
-                    if (remoteData.notifications) {
-                        db.notifications = remoteData.notifications;
-                    }
                     refreshCurrentView();
                     updateNotificationsBanner();
-                    checkPersonalNotifications();
                 }
             } catch(e) {}
         }
@@ -477,7 +472,7 @@
                 const response = await fetch(WORKER_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ data: { colleagues: db.colleagues, requests: db.requests, notifications: db.notifications } })
+                    body: JSON.stringify({ data: { colleagues: db.colleagues, requests: db.requests } })
                 });
                 const resJson = await response.json();
                 if (!resJson.success) {
@@ -685,7 +680,7 @@
             }
             document.getElementById('profile-avatar-file').value = '';
 
-            // Met à jour le badge dans le modal profil
+            // Met à jour le badge du bouton Mon Profil
             const profileModalBadge = document.getElementById('profile-modal-badge');
             if (!db.requests) db.requests = [];
             const myRequests = db.requests.filter(r => r.to.toLowerCase() === user.name.toLowerCase() && !r.resolved);
@@ -770,7 +765,7 @@
 
             db.requests.push({
                 id: 'req_' + Date.now(),
-                type: 'request', // Demande initiale de doublon
+                type: 'request', // Demande classique de doublon
                 from: currentUser.name,
                 to: ownerName,
                 cardKey: cardKey,
@@ -804,7 +799,7 @@
                 exchangeBadge.innerText = myRequests.length;
                 exchangeBadge.classList.remove('hidden');
                 profileBadge.innerText = myRequests.length;
-                profileBadge.classList.remove('hidden');
+                profileBadge.classList.add('hidden'); // On gère le badge du profil dans openProfileModal
                 banner.classList.remove('hidden');
             } else {
                 exchangeBadge.classList.add('hidden');
@@ -835,12 +830,12 @@
             myRequests.forEach(req => {
                 const card = db.cards[req.cardKey];
                 const cardName = card ? card.name : `Carte #${req.cardKey}`;
-                
+
                 if (req.type === 'response_accepted') {
-                    // Notification d'acceptation reçue par le demandeur initial, qui doit valider pour l'ajouter à son classeur
+                    // Notification reçue par le demandeur initial quand le propriétaire a accepté
                     html += `<div class="bg-emerald-50 dark:bg-emerald-950/30 p-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-800 flex flex-col gap-3 text-xs">
                         <div>
-                            <strong>${req.from}</strong> a accepté ta demande pour la carte <strong>${cardName}</strong>. Valide pour l'ajouter automatiquement à ton classeur !
+                            <strong>${req.from}</strong> a accepté ta demande pour la carte <strong>${cardName}</strong>, une fois que tu auras validé la carte sera rajoutée automatiquement à ton classeur.
                         </div>
                         <div class="flex items-center justify-end space-x-2">
                             <button onclick="resolveResponseRequest('${req.id}', '${req.cardKey}', 'claimed')" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition shadow-sm">
@@ -849,7 +844,7 @@
                         </div>
                     </div>`;
                 } else if (req.type === 'response_refused') {
-                    // Notification de refus
+                    // Notification reçue par le demandeur initial quand le propriétaire a refusé
                     html += `<div class="bg-red-50 dark:bg-red-950/30 p-3.5 rounded-2xl border border-red-200 dark:border-red-800 flex flex-col gap-3 text-xs">
                         <div>
                             Ta demande auprès de <strong>${req.from}</strong> pour la carte <strong>${cardName}</strong> a été refusée.
@@ -867,10 +862,10 @@
                             <strong>${req.from}</strong> aimerait récupérer ton doublon de <strong>${cardName}</strong> (${req.cardKey.startsWith('P') ? 'Premium' : '#' + req.cardKey}).
                         </div>
                         <div class="flex items-center justify-end space-x-2">
-                            <button onclick="resolveRequest('${req.id}', '${req.to}', '${req.cardKey}', 'refused')" class="px-3 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition shadow-sm">
+                            <button onclick="resolveRequest('${req.id}', '${req.to}', '${req.cardKey}', 'refused')" class="px-3.5 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition shadow-sm">
                                 Refuser ❌
                             </button>
-                            <button onclick="resolveRequest('${req.id}', '${req.to}', '${req.cardKey}', 'accepted')" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition shadow-sm">
+                            <button onclick="resolveRequest('${req.id}', '${req.to}', '${req.cardKey}', 'accepted')" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition shadow-sm">
                                 Valider 👍 (-1 ex.)
                             </button>
                         </div>
@@ -889,7 +884,7 @@
                 const cardName = card ? card.name : `Carte #${cardKey}`;
 
                 if (action === 'accepted') {
-                    // 1. Retire immédiatement un exemplaire au possesseur (propriétaire)
+                    // 1. Retire immédiatement la carte du classeur du propriétaire
                     const owner = db.colleagues.find(c => c.name.toLowerCase() === ownerName.toLowerCase());
                     if (owner && owner.collection[cardKey]) {
                         owner.collection[cardKey] -= 1;
@@ -898,23 +893,23 @@
                         }
                     }
 
-                    // 2. Crée une nouvelle requête de type "response_accepted" adressée au demandeur initial pour qu'il valide l'ajout
+                    // 2. Envoie la notification de réponse acceptée au demandeur
                     db.requests.push({
                         id: 'req_resp_' + Date.now(),
                         type: 'response_accepted',
-                        from: ownerName,       // C'est le propriétaire qui notifie
-                        to: req.from,         // Destinataire = le demandeur initial
+                        from: ownerName,
+                        to: req.from,
                         cardKey: cardKey,
                         resolved: false,
                         date: new Date().toLocaleDateString()
                     });
 
-                    // Pop-up du milieu (Confirmation d'échange)
-                    document.getElementById('exchange-confirmation-text').innerText = `Merci pour ton échange, la carte ${cardName} a été retirée de ton classeur automatiquement.`;
+                    // Pop-up du milieu de confirmation d'échange
+                    document.getElementById('exchange-confirmation-text').innerText = `Merci pour ton échange, la carte ${cardName} a été retiré de ton classeur automatiquement`;
                     document.getElementById('exchange-confirmation-modal').classList.remove('hidden');
 
                 } else {
-                    // Crée une requête de type "response_refused"
+                    // Envoie la notification de réponse refusée au demandeur
                     db.requests.push({
                         id: 'req_resp_' + Date.now(),
                         type: 'response_refused',
@@ -944,7 +939,7 @@
                 req.resolved = true;
 
                 if (action === 'claimed') {
-                    // Ajoute la carte au classeur de la personne qui avait fait la demande
+                    // Ajoute la carte au classeur de la personne qui avait fait la demande initiale
                     const currentUser = getCurrentUser();
                     if (currentUser) {
                         if (!currentUser.collection) currentUser.collection = {};
@@ -958,10 +953,6 @@
                 refreshCurrentView();
                 updateModalRequestsList();
             }
-        }
-
-        function checkPersonalNotifications() {
-            // Géré dynamiquement via les requêtes directes destinées à `to: currentUser.name`
         }
 
         function zoomCard(key) {
