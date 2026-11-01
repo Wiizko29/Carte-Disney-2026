@@ -105,9 +105,10 @@
             </div>
 
             <div class="space-y-3">
-                <button onclick="closeModal('profile-modal'); openRequestsModal();" class="w-full py-3 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+                <button onclick="closeModal('profile-modal'); openRequestsModal();" class="w-full py-3 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2 relative">
                     <i class="fa-solid fa-bell"></i>
                     <span>Voir les demandes d'échange reçues</span>
+                    <span id="profile-modal-badge" class="hidden absolute right-3 bg-red-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">0</span>
                 </button>
             </div>
 
@@ -125,6 +126,9 @@
                 </div>
                 <button onclick="closeModal('requests-modal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
             </div>
+            <p class="text-[11px] text-amber-600 dark:text-amber-400 font-medium bg-amber-50 dark:bg-amber-950/30 p-2.5 rounded-xl border border-amber-200 dark:border-amber-900/50">
+                ⚠️ Si vous acceptez une demande, le doublon sera automatiquement retiré de votre classeur.
+            </p>
             <div id="modal-requests-list" class="space-y-3 text-left"></div>
             <button onclick="closeModal('requests-modal')" class="w-full py-2.5 bg-slate-100 dark:bg-slate-800 text-xs font-bold rounded-xl transition">Fermer</button>
         </div>
@@ -666,6 +670,18 @@
                 previewImg.classList.add('hidden');
             }
             document.getElementById('profile-avatar-file').value = '';
+
+            // Met à jour le badge dans le modal profil
+            const profileModalBadge = document.getElementById('profile-modal-badge');
+            if (!db.requests) db.requests = [];
+            const myRequests = db.requests.filter(r => r.to.toLowerCase() === user.name.toLowerCase() && !r.resolved);
+            if (myRequests.length > 0) {
+                profileModalBadge.innerText = myRequests.length;
+                profileModalBadge.classList.remove('hidden');
+            } else {
+                profileModalBadge.classList.add('hidden');
+            }
+
             document.getElementById('profile-modal').classList.remove('hidden');
         }
 
@@ -832,6 +848,7 @@
                 if (!db.notifications) db.notifications = [];
 
                 if (action === 'accepted') {
+                    // Retire un exemplaire au possesseur (propriétaire de la carte)
                     const owner = db.colleagues.find(c => c.name.toLowerCase() === ownerName.toLowerCase());
                     if (owner && owner.collection[cardKey]) {
                         owner.collection[cardKey] -= 1;
@@ -840,16 +857,23 @@
                         }
                     }
 
-                    // Notification pour l'demandeur
+                    // Ajoute automatiquement la carte au demandeur
+                    const requester = db.colleagues.find(c => c.name.toLowerCase() === req.from.toLowerCase());
+                    if (requester) {
+                        if (!requester.collection) requester.collection = {};
+                        requester.collection[cardKey] = (requester.collection[cardKey] || 0) + 1;
+                    }
+
+                    // Notification pour le demandeur
                     db.notifications.push({
                         id: 'notif_' + Date.now(),
                         targetUser: req.from,
                         message: `${ownerName} a accepté ta demande pour la carte ${cardName}, une fois que tu auras validé la carte sera rajoutée automatiquement à ton classeur.`
                     });
 
-                    showToast("Merci pour ton échange, un doublon a été retiré de ton classeur !");
+                    showToast(`Merci pour ton échange, la carte ${cardName} a été retirée de ton classeur automatiquement.`);
                 } else {
-                    // Notification de refus pour l'demandeur
+                    // Notification de refus pour le demandeur
                     db.notifications.push({
                         id: 'notif_' + Date.now(),
                         targetUser: req.from,
@@ -864,7 +888,7 @@
                 refreshCurrentView();
                 renderMatrixTable();
                 
-                // Ne ferme PAS le modal pour permettre de traiter les suivantes, on actualise juste la liste
+                // Actualise la liste du modal sans le fermer pour permettre de traiter les suivantes
                 updateModalRequestsList();
             }
         }
