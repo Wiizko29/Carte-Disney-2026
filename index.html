@@ -112,6 +112,14 @@
                     </div>
                     <span id="profile-modal-badge" class="hidden bg-red-600 text-white text-[11px] font-extrabold px-2.5 py-0.5 rounded-full shadow-md border border-white/20">0</span>
                 </button>
+
+                <!-- Bouton de sauvegarde externe (Visible uniquement pour l'admin Basile) -->
+                <div id="admin-backup-container" class="hidden pt-2">
+                    <button onclick="downloadGlobalBackup()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Télécharger la sauvegarde globale (JSON)</span>
+                    </button>
+                </div>
             </div>
 
             <button onclick="closeModal('profile-modal')" class="w-full py-2.5 bg-slate-100 dark:bg-slate-800 text-xs font-bold rounded-xl transition">Fermer</button>
@@ -307,7 +315,6 @@
 
         <!-- TAB 2 : ÉCHANGES -->
         <section id="tab-exchanges" class="hidden space-y-6">
-            <!-- BANDEAU HARMONISÉ EN VERT / SOMBRE -->
             <div class="bg-gradient-to-r from-emerald-900 via-slate-900 to-teal-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-2xl font-extrabold tracking-tight">Zone des Doublons de l'Équipe</h2>
@@ -801,11 +808,32 @@
                 deleteContainer.classList.add('hidden');
             }
 
+            // Gestion de l'affichage du bouton de sauvegarde externe admin dans le profil
+            const backupContainer = document.getElementById('admin-backup-container');
+            if (isAdmin()) {
+                backupContainer.classList.remove('hidden');
+            } else {
+                backupContainer.classList.add('hidden');
+            }
+
             const activeSec = document.querySelector('main > section:not(.hidden)');
             if (!activeSec) return;
             if (activeSec.id === 'tab-mycollection') renderMyCollection();
             if (activeSec.id === 'tab-exchanges') renderMatrixTable();
             if (activeSec.id === 'tab-colleagues') initColleaguesCollectionTab();
+        }
+
+        // Fonction pour télécharger la sauvegarde globale en JSON (Admin uniquement)
+        function downloadGlobalBackup() {
+            if (!isAdmin()) return;
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ colleagues: db.colleagues, requests: db.requests }, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `cart_collect_backup_${new Date().toISOString().slice(0, 10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast("Sauvegarde globale téléchargée avec succès !");
         }
 
         function getAllKeys() {
