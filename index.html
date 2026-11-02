@@ -247,7 +247,7 @@
                 </button>
                 <button onclick="switchTab('exchanges')" id="nav-exchanges" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white relative">
                     <i class="fa-solid fa-handshake mr-1.5"></i> Échanges & Doublons
-                    <!-- Pas de badge ici -->
+                    <!-- Badge retiré de l'onglet Echanges -->
                 </button>
                 <button onclick="switchTab('colleagues')" id="nav-colleagues" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white">
                     <i class="fa-solid fa-users mr-1.5"></i> Équipe
@@ -592,31 +592,31 @@
             "39": "Dory",
 			"40": "Hank",
             "41": "Crush et Squiz",
-			"42": "Lilo et Stitch",
+            "42": "Lilo et Stitch",
             "43": "Jumba Jookiba",
-			"44": "Pikly",
+            "44": "Pikly",
             "45": "Angel",
-			"46": "Mulan et Cri-Kee",
+            "46": "Mulan et Cri-Kee",
             "47": "Mushu",
-			"48": "Mulan et Li Shang",
+            "48": "Mulan et Li Shang",
             "49": "Petit Frère",
-			"50": "Mulan et Khan",
+            "50": "Mulan et Khan",
             "51": "Mowgli",
-			"52": "Baloo et Bagheera",
-			"53": "Junior",
+            "52": "Baloo et Bagheera",
+            "53": "Junior",
             "54": "Kaa",
             "55": "Aladdin",
-			"56": "Jasmine",
+            "56": "Jasmine",
             "57": "Abu",
-			"58": "Génie",
+            "58": "Génie",
             "59": "Simba",
-			"60": "Nala",
+            "60": "Nala",
             "61": "Mufasa et Rafiki",
-			"62": "Scar",
+            "62": "Scar",
             "63": "Timon et Pumbaa",
-			"64": "Rémi",
+            "64": "Rémi",
             "65": "Emile",
-			"66": "Linguini",
+            "66": "Linguini",
             "67": "Colette",
             "68": "Gusteau",
             "69": "Marie",
@@ -948,7 +948,7 @@
                 badge.innerText = `✨ Fixeez ${key}`;
             } else {
                 badge.className = "bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full";
-                badge.innerText = `Normale #${key}`;
+                badge.innerText = `Carte Normale #${key}`;
             }
 
             document.getElementById('missing-action-modal').classList.remove('hidden');
@@ -1207,10 +1207,7 @@
                             🔔 Ton collègue <strong>${req.from}</strong> a le doublon de la carte <strong>${cardName}</strong> (${req.cardKey.startsWith('F') ? 'Fixeez' : '#' + req.cardKey}) !
                         </div>
                         <div class="flex items-center justify-end space-x-2">
-                            <button onclick="dismissAlert('${req.id}')" class="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 text-xs font-bold rounded-xl transition">
-                                Ignorer
-                            </button>
-                            <button onclick="goToDuplicateSearch('${req.cardKey}', '${req.id}')" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition shadow-sm">
+                            <button onclick="dismissAlert('${req.id}')" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition shadow-sm">
                                 Voir le doublon 🔍
                             </button>
                         </div>
@@ -1263,17 +1260,13 @@
                 saveAndPushCloud();
                 updateNotificationsBanner();
                 updateModalRequestsList();
-            }
-        }
-
-        function goToDuplicateSearch(cardKey, reqId) {
-            dismissAlert(reqId);
-            closeModal('requests-modal');
-            switchTab('exchanges');
-            const searchInput = document.getElementById('exchange-search');
-            if (searchInput) {
-                searchInput.value = cardKey;
-                renderMatrixTable();
+                closeModal('requests-modal');
+                switchTab('exchanges');
+                const searchInput = document.getElementById('exchange-search');
+                if (searchInput && req.cardKey) {
+                    searchInput.value = req.cardKey;
+                    renderMatrixTable();
+                }
             }
         }
 
