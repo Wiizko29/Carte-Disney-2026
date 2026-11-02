@@ -319,7 +319,7 @@
                 </div>
             </div>
 
-            <!-- RÉCAPITULATIF DES CARTES MANQUANTES (RÉDUIT PAR DÉFAUT) -->
+            <!-- RÉCAPITULATIF DES CARTES MANQUANTES -->
             <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
                 <div class="flex items-center justify-between cursor-pointer select-none" onclick="toggleMissingSummary()">
                     <div class="flex items-center space-x-2.5">
@@ -938,7 +938,7 @@
                 badge.innerText = `✨ Fixeez ${key}`;
             } else {
                 badge.className = "bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full";
-                badge.innerText = `Normale #${key}`;
+                badge.innerText = `Carte Normale #${key}`;
             }
 
             document.getElementById('missing-action-modal').classList.remove('hidden');
@@ -960,7 +960,8 @@
                     renderMatrixTable();
                 }
             } else if (action === 'notify') {
-                showToast("Option m'avertir désactivée (sera vue plus tard si besoin)");
+                // Affiche la modale de confirmation demandée
+                document.getElementById('alert-success-modal').classList.remove('hidden');
             }
         }
 
