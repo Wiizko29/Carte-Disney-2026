@@ -247,7 +247,7 @@
                 </button>
                 <button onclick="switchTab('exchanges')" id="nav-exchanges" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white relative">
                     <i class="fa-solid fa-handshake mr-1.5"></i> Échanges & Doublons
-                    <span id="exchange-badge-count" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full shadow">0</span>
+                    <!-- Pas de badge ici -->
                 </button>
                 <button onclick="switchTab('colleagues')" id="nav-colleagues" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white">
                     <i class="fa-solid fa-users mr-1.5"></i> Équipe
@@ -603,8 +603,8 @@
 			"50": "Mulan et Khan",
             "51": "Mowgli",
 			"52": "Baloo et Bagheera",
-            "53": "Junior",
-			"54": "Kaa",
+			"53": "Junior",
+            "54": "Kaa",
             "55": "Aladdin",
 			"56": "Jasmine",
             "57": "Abu",
@@ -618,45 +618,45 @@
             "65": "Emile",
 			"66": "Linguini",
             "67": "Colette",
-			"68": "Gusteau",
+            "68": "Gusteau",
             "69": "Marie",
-			"70": "Thomas O' Malley",
+            "70": "Thomas O' Malley",
             "71": "Duchesse",
-			"72": "Marie et Berlioz",
+            "72": "Marie et Berlioz",
             "73": "Belle",
-			"74": "La Bête",
+            "74": "La Bête",
             "75": "Big Ben",
-			"76": "Lumière",
+            "76": "Lumière",
             "77": "Mme Samovar et Zip",
-			"78": "Raiponce",
+            "78": "Raiponce",
             "79": "Flynn Rider",
-			"80": "Maximus",
+            "80": "Maximus",
             "81": "Pascal",
-			"82": "Pongo",
+            "82": "Pongo",
             "83": "Perdita",
             "84": "Patch",
-			"85": "Rolly",
+            "85": "Rolly",
             "86": "Lucky",
             "87": "Peter Pan",
-			"88": "La Fée Clochette",
+            "88": "La Fée Clochette",
             "89": "Capitaine Crochet",
-			"90": "Monsieur Mouche",
+            "90": "Monsieur Mouche",
             "91": "Elsa",
-			"92": "Anna",
+            "92": "Anna",
             "93": "Kristoff",
-			"94": "Olaf",
+            "94": "Olaf",
             "95": "Bruni",
-			"96": "Elsa et Nokk",
+            "96": "Elsa et Nokk",
             "97": "Sven",
-			"98": "Anna et Elsa",
+            "98": "Anna et Elsa",
             "99": "Olaf",
-			"100": "Nick Wilde",
+            "100": "Nick Wilde",
             "101": "Judy Hopps",
-			"102": "Chef Bogo",
+            "102": "Chef Bogo",
             "103": "Gary De'Snake",
-			"104": "Nibbles Maplestick",
+            "104": "Nibbles Maplestick",
             "105": "Bob",
-			"106": "Sulli",
+            "106": "Sulli",
             "107": "Bouh",
             "108": "Germaine"
         };
@@ -707,7 +707,6 @@
                         db.alerts = remoteData.alerts;
                     }
 
-                    // Vérification automatique des alertes "m'avertir quand doublon dispo"
                     checkAlertsOnSync(oldColleagues, db.colleagues);
 
                     refreshCurrentView();
@@ -914,7 +913,7 @@
 
         function downloadGlobalBackup() {
             if (!isAdmin()) return;
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ colleagues: db.colleagues, requests: db.requests, alerts: db.alerts }, null, 2));
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ colleagues: db.colleagues, requests: db.requests }, null, 2));
             const downloadAnchor = document.createElement('a');
             downloadAnchor.setAttribute("href", dataStr);
             downloadAnchor.setAttribute("download", `cart_collect_backup_${new Date().toISOString().slice(0, 10)}.json`);
@@ -982,12 +981,10 @@
                     saveAndPushCloud();
                 }
 
-                // Ouvre la modale de confirmation demandée
                 document.getElementById('alert-success-modal').classList.remove('hidden');
             }
         }
 
-        // Vérification automatique des alertes à chaque synchronisation
         function checkAlertsOnSync(oldColleagues, newColleagues) {
             if (!db.alerts || db.alerts.length === 0) return;
 
@@ -1013,13 +1010,11 @@
                 });
 
                 if (foundNewDupBy) {
-                    // Si c'est pour l'utilisateur actuellement connecté
                     if (userName.toLowerCase() === currentUser.name.toLowerCase()) {
                         if (!triggeredCardKeysForMe.includes(cardKey)) {
                             triggeredCardKeysForMe.push(cardKey);
                             if (!db.requests) db.requests = [];
                             
-                            // Eviter les doublons de notif identiques non résolues
                             const notifExists = db.requests.some(r => r.to.toLowerCase() === userName.toLowerCase() && r.cardKey === cardKey && r.type === 'duplicate_alert' && !r.resolved);
                             if (!notifExists) {
                                 db.requests.push({
@@ -1167,7 +1162,6 @@
             if (!currentUser) return;
 
             const banner = document.getElementById('notifications-banner');
-            const exchangeBadge = document.getElementById('exchange-badge-count');
             const profileBadge = document.getElementById('profile-badge-count');
 
             if (!db.requests) db.requests = [];
@@ -1175,13 +1169,10 @@
             const myRequests = db.requests.filter(r => r.to.toLowerCase() === currentUser.name.toLowerCase() && !r.resolved);
 
             if (myRequests.length > 0) {
-                exchangeBadge.innerText = myRequests.length;
-                exchangeBadge.classList.remove('hidden');
                 profileBadge.innerText = myRequests.length;
                 profileBadge.classList.remove('hidden');
                 banner.classList.remove('hidden');
             } else {
-                exchangeBadge.classList.add('hidden');
                 profileBadge.classList.add('hidden');
                 banner.classList.add('hidden');
             }
