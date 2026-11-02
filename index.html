@@ -280,6 +280,45 @@
                 </div>
             </div>
 
+            <!-- RÉCAPITULATIF DES CARTES MANQUANTES -->
+            <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                <div class="flex items-center justify-between cursor-pointer select-none" onclick="toggleMissingSummary()">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-sm">
+                            <i class="fa-solid fa-clipboard-list"></i>
+                        </div>
+                        <h3 class="font-extrabold text-sm sm:text-base">Récapitulatif des cartes manquantes</h3>
+                    </div>
+                    <span id="missing-summary-toggle-icon" class="text-slate-400 text-xs font-bold transition-transform"><i class="fa-solid fa-chevron-down"></i> Masquer / Afficher</span>
+                </div>
+
+                <div id="missing-summary-content" class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <!-- Fixeez Manquantes -->
+                    <div class="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-extrabold text-amber-500 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-star text-[10px]"></i> Fixeez manquantes (<span id="missing-fixeez-count">0</span>)
+                            </span>
+                        </div>
+                        <div id="missing-fixeez-chips" class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto custom-scrollbar p-1">
+                            <!-- Injecté dynamiquement -->
+                        </div>
+                    </div>
+
+                    <!-- Cartes Normales Manquantes -->
+                    <div class="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-hashtag text-[10px]"></i> Normales manquantes (<span id="missing-normal-count">0</span>)
+                            </span>
+                        </div>
+                        <div id="missing-normal-chips" class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto custom-scrollbar p-1">
+                            <!-- Injecté dynamiquement -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                 <div class="flex items-center space-x-3 w-full sm:w-auto flex-wrap gap-y-2">
                     <div class="relative flex-1 sm:w-64">
@@ -553,9 +592,9 @@
             "81": "Pascal",
 			"82": "Pongo",
             "83": "Perdita",
-			"84": "Patch",
+            "84": "Patch",
 			"85": "Rolly",
-			"86": "Lucky",
+            "86": "Lucky",
             "87": "Peter Pan",
 			"88": "La Fée Clochette",
             "89": "Capitaine Crochet",
@@ -808,7 +847,6 @@
                 deleteContainer.classList.add('hidden');
             }
 
-            // Gestion de l'affichage du bouton de sauvegarde externe admin dans le profil
             const backupContainer = document.getElementById('admin-backup-container');
             if (isAdmin()) {
                 backupContainer.classList.remove('hidden');
@@ -823,7 +861,6 @@
             if (activeSec.id === 'tab-colleagues') initColleaguesCollectionTab();
         }
 
-        // Fonction pour télécharger la sauvegarde globale en JSON (Admin uniquement)
         function downloadGlobalBackup() {
             if (!isAdmin()) return;
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ colleagues: db.colleagues, requests: db.requests }, null, 2));
@@ -841,6 +878,11 @@
             for (let i = 1; i <= 24; i++) keys.push(`F${i}`);
             for (let i = 1; i <= 108; i++) keys.push(i.toString());
             return keys;
+        }
+
+        function toggleMissingSummary() {
+            const content = document.getElementById('missing-summary-content');
+            content.classList.toggle('hidden');
         }
 
         function openProfileModal() {
@@ -1142,6 +1184,50 @@
             document.getElementById('card-zoom-modal').classList.remove('hidden');
         }
 
+        function updateMissingSummary(targetCol) {
+            const fixeezChipsContainer = document.getElementById('missing-fixeez-chips');
+            const normalChipsContainer = document.getElementById('missing-normal-chips');
+            const fixeezCountEl = document.getElementById('missing-fixeez-count');
+            const normalCountEl = document.getElementById('missing-normal-count');
+
+            let missingFixeez = [];
+            let missingNormals = [];
+
+            getAllKeys().forEach(key => {
+                const qty = targetCol.collection[key] || 0;
+                if (qty === 0) {
+                    if (key.startsWith('F')) {
+                        missingFixeez.push(key);
+                    } else {
+                        missingNormals.push(key);
+                    }
+                }
+            });
+
+            fixeezCountEl.innerText = missingFixeez.length;
+            normalCountEl.innerText = missingNormals.length;
+
+            if (missingFixeez.length === 0) {
+                fixeezChipsContainer.innerHTML = `<span class="text-[11px] text-emerald-600 font-bold italic p-1">🎉 Toutes les Fixeez sont possédées !</span>`;
+            } else {
+                fixeezChipsContainer.innerHTML = missingFixeez.map(k => `
+                    <button onclick="openQtyModal('${targetCol.id}', '${k}')" class="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-lg text-xs font-extrabold transition shadow-sm" title="${db.cards[k].name}">
+                        ${k} : ${db.cards[k].name}
+                    </button>
+                `).join('');
+            }
+
+            if (missingNormals.length === 0) {
+                normalChipsContainer.innerHTML = `<span class="text-[11px] text-emerald-600 font-bold italic p-1">🎉 Toutes les cartes normales sont possédées !</span>`;
+            } else {
+                normalChipsContainer.innerHTML = missingNormals.map(k => `
+                    <button onclick="openQtyModal('${targetCol.id}', '${k}')" class="px-2 py-1 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold transition shadow-sm" title="${db.cards[k].name}">
+                        #${k} : ${db.cards[k].name}
+                    </button>
+                `).join('');
+            }
+        }
+
         function generateCardsHTML(targetCol, searchId, filterId, layoutId, containerId, countOwnedId, countMissingId) {
             const container = document.getElementById(containerId);
             const search = document.getElementById(searchId).value.toLowerCase();
@@ -1169,6 +1255,11 @@
 
             if (countOwnedId) document.getElementById(countOwnedId).innerText = `${ownedCount} / 132`;
             if (countMissingId) document.getElementById(countMissingId).innerText = 132 - ownedCount;
+
+            // Met à jour le récapitulatif des manquantes pour son propre classeur
+            if (targetCol.id === getCurrentUser().id) {
+                updateMissingSummary(targetCol);
+            }
 
             if (cardsToRender.length === 0) {
                 container.innerHTML = `<div class="col-span-full p-8 text-center text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">Aucune carte trouvée.</div>`;
