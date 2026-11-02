@@ -158,6 +158,20 @@
         </div>
     </div>
 
+    <!-- MODAL POPUP CONFIRMATION ALERTE DOUBLON ACTIVÉE -->
+    <div id="alert-success-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-5 text-center">
+            <div class="w-16 h-16 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center text-3xl mx-auto shadow-inner">
+                <i class="fa-solid fa-bell"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-extrabold">Alerte enregistrée !</h3>
+                <p class="text-xs text-slate-500 mt-2">Compris, dès qu'un de tes collègues aura ce doublon tu seras notifié.</p>
+            </div>
+            <button onclick="closeModal('alert-success-modal')" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-2xl shadow-md transition">Compris !</button>
+        </div>
+    </div>
+
     <!-- MODAL POPUP POP-UP DU MILIEU (CONFIRMATION ÉCHANGE) -->
     <div id="exchange-confirmation-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-5 text-center">
@@ -500,6 +514,7 @@
                 { id: "col_basile", name: "Basile", avatar: "👑", collection: {}, createdBy: "admin" }
             ],
             requests: [],
+            alerts: [],
             cards: {}
         };
 
@@ -688,6 +703,9 @@
                     if (remoteData.requests) {
                         db.requests = remoteData.requests;
                     }
+                    if (remoteData.alerts) {
+                        db.alerts = remoteData.alerts;
+                    }
 
                     // Vérification automatique des alertes "m'avertir quand doublon dispo"
                     checkAlertsOnSync(oldColleagues, db.colleagues);
@@ -703,7 +721,7 @@
                 const response = await fetch(WORKER_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ data: { colleagues: db.colleagues, requests: db.requests } })
+                    body: JSON.stringify({ data: { colleagues: db.colleagues, requests: db.requests, alerts: db.alerts } })
                 });
                 const resJson = await response.json();
                 if (!resJson.success) {
@@ -896,7 +914,7 @@
 
         function downloadGlobalBackup() {
             if (!isAdmin()) return;
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ colleagues: db.colleagues, requests: db.requests }, null, 2));
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ colleagues: db.colleagues, requests: db.requests, alerts: db.alerts }, null, 2));
             const downloadAnchor = document.createElement('a');
             downloadAnchor.setAttribute("href", dataStr);
             downloadAnchor.setAttribute("download", `cart_collect_backup_${new Date().toISOString().slice(0, 10)}.json`);
@@ -953,10 +971,8 @@
                     renderMatrixTable();
                 }
             } else if (action === 'notify') {
-                // Enregistrement de l'alerte pour ce user et cette carte
                 if (!db.alerts) db.alerts = [];
                 
-                // Vérifier si l'alerte existe déjà
                 const alreadyExists = db.alerts.some(a => a.user.toLowerCase() === currentUser.name.toLowerCase() && a.cardKey === activeMissingKey);
                 if (!alreadyExists) {
                     db.alerts.push({
@@ -966,51 +982,59 @@
                     saveAndPushCloud();
                 }
 
-                showToast(`Compris, dès qu'un de tes collègues aura ce doublon tu seras notifié.`);
+                // Ouvre la modale de confirmation demandée
+                document.getElementById('alert-success-modal').classList.remove('hidden');
             }
         }
 
-        // Vérifie si un doublon vient d'apparaître pour déclencher la notification
+        // Vérification automatique des alertes à chaque synchronisation
         function checkAlertsOnSync(oldColleagues, newColleagues) {
             if (!db.alerts || db.alerts.length === 0) return;
 
+            const currentUser = getCurrentUser();
             let newAlerts = [];
+            let triggeredCardKeysForMe = [];
+
             db.alerts.forEach(alert => {
                 const cardKey = alert.cardKey;
                 const userName = alert.user;
 
-                // Trouver si un collègue (autre que le user) vient d'avoir un doublon (> 1) pour cette carte
                 let foundNewDupBy = null;
                 newColleagues.forEach(newCol => {
-                    if (newCol.name.toLowerCase() === userName.toLowerCase()) return; // Ne pas s'auto-notifier si c'est lui-même
+                    if (newCol.name.toLowerCase() === userName.toLowerCase()) return; 
 
                     let newQty = newCol.collection[cardKey] || 0;
                     let oldCol = oldColleagues.find(c => c.name.toLowerCase() === newCol.name.toLowerCase());
                     let oldQty = oldCol ? (oldCol.collection[cardKey] || 0) : 0;
 
-                    // Si la quantité est passée à > 1 alors qu'avant elle était <= 1
                     if (newQty > 1 && oldQty <= 1) {
                         foundNewDupBy = newCol.name;
                     }
                 });
 
                 if (foundNewDupBy) {
-                    // Créer une notification d'alerte doublon pour le user
-                    if (!db.requests) db.requests = [];
-                    const card = db.cards[cardKey];
-                    const cardName = card ? card.name : `Carte #${cardKey}`;
-
-                    db.requests.push({
-                        id: 'req_alert_' + Date.now() + Math.random(),
-                        type: 'duplicate_alert',
-                        from: foundNewDupBy,
-                        to: userName,
-                        cardKey: cardKey,
-                        resolved: false,
-                        date: new Date().toLocaleDateString()
-                    });
+                    // Si c'est pour l'utilisateur actuellement connecté
+                    if (userName.toLowerCase() === currentUser.name.toLowerCase()) {
+                        if (!triggeredCardKeysForMe.includes(cardKey)) {
+                            triggeredCardKeysForMe.push(cardKey);
+                            if (!db.requests) db.requests = [];
+                            
+                            // Eviter les doublons de notif identiques non résolues
+                            const notifExists = db.requests.some(r => r.to.toLowerCase() === userName.toLowerCase() && r.cardKey === cardKey && r.type === 'duplicate_alert' && !r.resolved);
+                            if (!notifExists) {
+                                db.requests.push({
+                                    id: 'req_alert_' + Date.now() + Math.random(),
+                                    type: 'duplicate_alert',
+                                    from: foundNewDupBy,
+                                    to: userName,
+                                    cardKey: cardKey,
+                                    resolved: false,
+                                    date: new Date().toLocaleDateString()
+                                });
+                            }
+                        }
+                    }
                 } else {
-                    // Garder l'alerte active tant que le doublon n'a pas été trouvé chez quelqu'un
                     newAlerts.push(alert);
                 }
             });
@@ -1046,7 +1070,6 @@
                 profileModalBadge.classList.add('hidden');
             }
 
-            document.getElementById('profile-modal').classList.add('hidden'); // Fix modal close bug
             document.getElementById('profile-modal').classList.remove('hidden');
         }
 
@@ -1188,7 +1211,6 @@
                 const cardName = card ? card.name : `Carte #${req.cardKey}`;
 
                 if (req.type === 'duplicate_alert') {
-                    // Notification d'alerte doublon disponible avec bouton "Voir le doublon"
                     html += `<div class="bg-amber-50 dark:bg-amber-950/30 p-3.5 rounded-2xl border border-amber-200 dark:border-amber-800 flex flex-col gap-3 text-xs">
                         <div>
                             🔔 Ton collègue <strong>${req.from}</strong> a le doublon de la carte <strong>${cardName}</strong> (${req.cardKey.startsWith('F') ? 'Fixeez' : '#' + req.cardKey}) !
