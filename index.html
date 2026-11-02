@@ -319,7 +319,7 @@
                 </div>
             </div>
 
-            <!-- RÉCAPITULATIF DES CARTES MANQUANTES -->
+            <!-- RÉCAPITULATIF DES CARTES MANQUANTES (RÉDUIT PAR DÉFAUT) -->
             <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
                 <div class="flex items-center justify-between cursor-pointer select-none" onclick="toggleMissingSummary()">
                     <div class="flex items-center space-x-2.5">
@@ -513,7 +513,6 @@
                 { id: "col_basile", name: "Basile", avatar: "👑", collection: {}, createdBy: "admin" }
             ],
             requests: [],
-            alerts: [],
             cards: {}
         };
 
@@ -684,9 +683,6 @@
                 const remoteData = await response.json();
 
                 if (remoteData) {
-                    // On conserve l'état actuel en mémoire avant fusion pour comparer les deltas de doublons
-                    let oldColleagues = JSON.parse(JSON.stringify(db.colleagues));
-
                     if (remoteData.colleagues && remoteData.colleagues.length > 0) {
                         let mergedColleagues = [...db.colleagues];
                         remoteData.colleagues.forEach(remoteCol => {
@@ -703,13 +699,6 @@
                     if (remoteData.requests) {
                         db.requests = remoteData.requests;
                     }
-                    if (remoteData.alerts) {
-                        db.alerts = remoteData.alerts;
-                    }
-
-                    // On exécute la vérification d'alerte en comparant l'ancien état et le nouveau état distant
-                    checkAlertsOnSync(oldColleagues, db.colleagues);
-
                     refreshCurrentView();
                     updateNotificationsBanner();
                 }
@@ -721,7 +710,7 @@
                 const response = await fetch(WORKER_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ data: { colleagues: db.colleagues, requests: db.requests, alerts: db.alerts } })
+                    body: JSON.stringify({ data: { colleagues: db.colleagues, requests: db.requests } })
                 });
                 const resJson = await response.json();
                 if (!resJson.success) {
@@ -782,13 +771,6 @@
             } else {
                 document.getElementById('welcome-modal').classList.remove('hidden');
             }
-
-            // Polling automatique en arrière-plan toutes les 10 secondes
-            setInterval(() => {
-                if (db.currentUserName) {
-                    syncWithCloud();
-                }
-            }, 10000);
         }
 
         function registerFirstUser() {
@@ -921,7 +903,7 @@
 
         function downloadGlobalBackup() {
             if (!isAdmin()) return;
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ colleagues: db.colleagues, requests: db.requests, alerts: db.alerts }, null, 2));
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ colleagues: db.colleagues, requests: db.requests }, null, 2));
             const downloadAnchor = document.createElement('a');
             downloadAnchor.setAttribute("href", dataStr);
             downloadAnchor.setAttribute("download", `cart_collect_backup_${new Date().toISOString().slice(0, 10)}.json`);
@@ -978,69 +960,8 @@
                     renderMatrixTable();
                 }
             } else if (action === 'notify') {
-                if (!db.alerts) db.alerts = [];
-                
-                const alreadyExists = db.alerts.some(a => a.user.toLowerCase() === currentUser.name.toLowerCase() && a.cardKey === activeMissingKey);
-                if (!alreadyExists) {
-                    db.alerts.push({
-                        user: currentUser.name,
-                        cardKey: activeMissingKey
-                    });
-                    saveAndPushCloud();
-                }
-
-                document.getElementById('alert-success-modal').classList.remove('hidden');
+                showToast("Option m'avertir désactivée (sera vue plus tard si besoin)");
             }
-        }
-
-        // Vérification automatique des alertes et génération instantanée de la notification
-        function checkAlertsOnSync(oldColleagues, newColleagues) {
-            if (!db.alerts || db.alerts.length === 0) return;
-
-            const currentUser = getCurrentUser();
-            let newAlerts = [];
-
-            db.alerts.forEach(alert => {
-                const cardKey = alert.cardKey;
-                const userName = alert.user;
-
-                let foundNewDupBy = null;
-                newColleagues.forEach(newCol => {
-                    if (newCol.name.toLowerCase() === userName.toLowerCase()) return; 
-
-                    let newQty = newCol.collection[cardKey] || 0;
-                    let oldCol = oldColleagues.find(c => c.name.toLowerCase() === newCol.name.toLowerCase());
-                    let oldQty = oldCol ? (oldCol.collection[cardKey] || 0) : 0;
-
-                    // Détecte si un collègue vient d'obtenir un doublon (> 1) qu'il n'avait pas avant
-                    if (newQty > 1 && oldQty <= 1) {
-                        foundNewDupBy = newCol.name;
-                    }
-                });
-
-                if (foundNewDupBy) {
-                    if (userName.toLowerCase() === currentUser.name.toLowerCase()) {
-                        if (!db.requests) db.requests = [];
-                        
-                        const notifExists = db.requests.some(r => r.to.toLowerCase() === userName.toLowerCase() && r.cardKey === cardKey && r.type === 'duplicate_alert' && !r.resolved);
-                        if (!notifExists) {
-                            db.requests.push({
-                                id: 'req_alert_' + Date.now() + Math.random(),
-                                type: 'duplicate_alert',
-                                from: foundNewDupBy,
-                                to: userName,
-                                cardKey: cardKey,
-                                resolved: false,
-                                date: new Date().toLocaleDateString()
-                            });
-                        }
-                    }
-                } else {
-                    newAlerts.push(alert);
-                }
-            });
-
-            db.alerts = newAlerts;
         }
 
         function openProfileModal() {
@@ -1206,21 +1127,7 @@
                 const card = db.cards[req.cardKey];
                 const cardName = card ? card.name : `Carte #${req.cardKey}`;
 
-                if (req.type === 'duplicate_alert') {
-                    html += `<div class="bg-amber-50 dark:bg-amber-950/30 p-3.5 rounded-2xl border border-amber-200 dark:border-amber-800 flex flex-col gap-3 text-xs">
-                        <div>
-                            🔔 Ton collègue <strong>${req.from}</strong> a le doublon de la carte <strong>${cardName}</strong> (${req.cardKey.startsWith('F') ? 'Fixeez' : '#' + req.cardKey}) !
-                        </div>
-                        <div class="flex items-center justify-end space-x-2">
-                            <button onclick="dismissAlert('${req.id}')" class="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 text-xs font-bold rounded-xl transition">
-                                Ignorer
-                            </button>
-                            <button onclick="goToDuplicateSearch('${req.cardKey}', '${req.id}')" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition shadow-sm">
-                                Voir le doublon 🔍
-                            </button>
-                        </div>
-                    </div>`;
-                } else if (req.type === 'response_accepted') {
+                if (req.type === 'response_accepted') {
                     html += `<div class="bg-emerald-50 dark:bg-emerald-950/30 p-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-800 flex flex-col gap-3 text-xs">
                         <div>
                             <strong>${req.from}</strong> a accepté ta demande pour la carte <strong>${cardName}</strong>, une fois que tu auras validé la carte sera rajoutée automatiquement à ton classeur.
@@ -1259,27 +1166,6 @@
                 }
             });
             listEl.innerHTML = html;
-        }
-
-        function dismissAlert(reqId) {
-            const req = db.requests.find(r => r.id === reqId);
-            if (req) {
-                req.resolved = true;
-                saveAndPushCloud();
-                updateNotificationsBanner();
-                updateModalRequestsList();
-            }
-        }
-
-        function goToDuplicateSearch(cardKey, reqId) {
-            dismissAlert(reqId);
-            closeModal('requests-modal');
-            switchTab('exchanges');
-            const searchInput = document.getElementById('exchange-search');
-            if (searchInput) {
-                searchInput.value = cardKey;
-                renderMatrixTable();
-            }
         }
 
         function resolveRequest(reqId, ownerName, cardKey, action) {
