@@ -684,6 +684,7 @@
                 const remoteData = await response.json();
 
                 if (remoteData) {
+                    // On conserve l'état actuel en mémoire avant fusion pour comparer les deltas de doublons
                     let oldColleagues = JSON.parse(JSON.stringify(db.colleagues));
 
                     if (remoteData.colleagues && remoteData.colleagues.length > 0) {
@@ -706,6 +707,7 @@
                         db.alerts = remoteData.alerts;
                     }
 
+                    // On exécute la vérification d'alerte en comparant l'ancien état et le nouveau état distant
                     checkAlertsOnSync(oldColleagues, db.colleagues);
 
                     refreshCurrentView();
@@ -781,7 +783,7 @@
                 document.getElementById('welcome-modal').classList.remove('hidden');
             }
 
-            // Polling automatique en arrière-plan toutes les 10 secondes pour actualiser les données et alertes
+            // Polling automatique en arrière-plan toutes les 10 secondes
             setInterval(() => {
                 if (db.currentUserName) {
                     syncWithCloud();
@@ -987,12 +989,11 @@
                     saveAndPushCloud();
                 }
 
-                // Affiche bien la modale de confirmation demandée
                 document.getElementById('alert-success-modal').classList.remove('hidden');
             }
         }
 
-        // Vérification automatique des alertes et génération de notification instantanée
+        // Vérification automatique des alertes et génération instantanée de la notification
         function checkAlertsOnSync(oldColleagues, newColleagues) {
             if (!db.alerts || db.alerts.length === 0) return;
 
@@ -1011,6 +1012,7 @@
                     let oldCol = oldColleagues.find(c => c.name.toLowerCase() === newCol.name.toLowerCase());
                     let oldQty = oldCol ? (oldCol.collection[cardKey] || 0) : 0;
 
+                    // Détecte si un collègue vient d'obtenir un doublon (> 1) qu'il n'avait pas avant
                     if (newQty > 1 && oldQty <= 1) {
                         foundNewDupBy = newCol.name;
                     }
@@ -1039,7 +1041,6 @@
             });
 
             db.alerts = newAlerts;
-            saveAndPushCloud();
         }
 
         function openProfileModal() {
