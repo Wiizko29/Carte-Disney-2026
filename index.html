@@ -247,6 +247,7 @@
                 </button>
                 <button onclick="switchTab('exchanges')" id="nav-exchanges" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white relative">
                     <i class="fa-solid fa-handshake mr-1.5"></i> Échanges & Doublons
+                    <span id="exchange-badge-count" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full shadow">0</span>
                 </button>
                 <button onclick="switchTab('colleagues')" id="nav-colleagues" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white">
                     <i class="fa-solid fa-users mr-1.5"></i> Équipe
@@ -513,6 +514,7 @@
                 { id: "col_basile", name: "Basile", avatar: "👑", collection: {}, createdBy: "admin" }
             ],
             requests: [],
+            alerts: [],
             cards: {}
         };
 
@@ -616,45 +618,45 @@
             "65": "Emile",
 			"66": "Linguini",
             "67": "Colette",
-            "68": "Gusteau",
+			"68": "Gusteau",
             "69": "Marie",
-            "70": "Thomas O' Malley",
+			"70": "Thomas O' Malley",
             "71": "Duchesse",
-            "72": "Marie et Berlioz",
+			"72": "Marie et Berlioz",
             "73": "Belle",
-            "74": "La Bête",
+			"74": "La Bête",
             "75": "Big Ben",
-            "76": "Lumière",
+			"76": "Lumière",
             "77": "Mme Samovar et Zip",
-            "78": "Raiponce",
+			"78": "Raiponce",
             "79": "Flynn Rider",
-            "80": "Maximus",
+			"80": "Maximus",
             "81": "Pascal",
-            "82": "Pongo",
+			"82": "Pongo",
             "83": "Perdita",
             "84": "Patch",
-            "85": "Rolly",
+			"85": "Rolly",
             "86": "Lucky",
             "87": "Peter Pan",
-            "88": "La Fée Clochette",
+			"88": "La Fée Clochette",
             "89": "Capitaine Crochet",
-            "90": "Monsieur Mouche",
+			"90": "Monsieur Mouche",
             "91": "Elsa",
-            "92": "Anna",
+			"92": "Anna",
             "93": "Kristoff",
-            "94": "Olaf",
+			"94": "Olaf",
             "95": "Bruni",
-            "96": "Elsa et Nokk",
+			"96": "Elsa et Nokk",
             "97": "Sven",
-            "98": "Anna et Elsa",
+			"98": "Anna et Elsa",
             "99": "Olaf",
-            "100": "Nick Wilde",
+			"100": "Nick Wilde",
             "101": "Judy Hopps",
-            "102": "Chef Bogo",
+			"102": "Chef Bogo",
             "103": "Gary De'Snake",
-            "104": "Nibbles Maplestick",
+			"104": "Nibbles Maplestick",
             "105": "Bob",
-            "106": "Sulli",
+			"106": "Sulli",
             "107": "Bouh",
             "108": "Germaine"
         };
@@ -683,6 +685,8 @@
                 const remoteData = await response.json();
 
                 if (remoteData) {
+                    let oldColleagues = JSON.parse(JSON.stringify(db.colleagues));
+
                     if (remoteData.colleagues && remoteData.colleagues.length > 0) {
                         let mergedColleagues = [...db.colleagues];
                         remoteData.colleagues.forEach(remoteCol => {
@@ -699,6 +703,13 @@
                     if (remoteData.requests) {
                         db.requests = remoteData.requests;
                     }
+                    if (remoteData.alerts) {
+                        db.alerts = remoteData.alerts;
+                    }
+
+                    // Vérification automatique des alertes "m'avertir quand doublon dispo"
+                    checkAlertsOnSync(oldColleagues, db.colleagues);
+
                     refreshCurrentView();
                     updateNotificationsBanner();
                 }
@@ -710,7 +721,7 @@
                 const response = await fetch(WORKER_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ data: { colleagues: db.colleagues, requests: db.requests } })
+                    body: JSON.stringify({ data: { colleagues: db.colleagues, requests: db.requests, alerts: db.alerts } })
                 });
                 const resJson = await response.json();
                 if (!resJson.success) {
@@ -903,7 +914,7 @@
 
         function downloadGlobalBackup() {
             if (!isAdmin()) return;
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ colleagues: db.colleagues, requests: db.requests }, null, 2));
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ colleagues: db.colleagues, requests: db.requests, alerts: db.alerts }, null, 2));
             const downloadAnchor = document.createElement('a');
             downloadAnchor.setAttribute("href", dataStr);
             downloadAnchor.setAttribute("download", `cart_collect_backup_${new Date().toISOString().slice(0, 10)}.json`);
@@ -938,7 +949,7 @@
                 badge.innerText = `✨ Fixeez ${key}`;
             } else {
                 badge.className = "bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full";
-                badge.innerText = `Carte Normale #${key}`;
+                badge.innerText = `Normale #${key}`;
             }
 
             document.getElementById('missing-action-modal').classList.remove('hidden');
@@ -960,9 +971,76 @@
                     renderMatrixTable();
                 }
             } else if (action === 'notify') {
-                // Affiche la modale de confirmation demandée
+                if (!db.alerts) db.alerts = [];
+                
+                const alreadyExists = db.alerts.some(a => a.user.toLowerCase() === currentUser.name.toLowerCase() && a.cardKey === activeMissingKey);
+                if (!alreadyExists) {
+                    db.alerts.push({
+                        user: currentUser.name,
+                        cardKey: activeMissingKey
+                    });
+                    saveAndPushCloud();
+                }
+
+                // Ouvre la modale de confirmation demandée
                 document.getElementById('alert-success-modal').classList.remove('hidden');
             }
+        }
+
+        // Vérification automatique des alertes à chaque synchronisation
+        function checkAlertsOnSync(oldColleagues, newColleagues) {
+            if (!db.alerts || db.alerts.length === 0) return;
+
+            const currentUser = getCurrentUser();
+            let newAlerts = [];
+            let triggeredCardKeysForMe = [];
+
+            db.alerts.forEach(alert => {
+                const cardKey = alert.cardKey;
+                const userName = alert.user;
+
+                let foundNewDupBy = null;
+                newColleagues.forEach(newCol => {
+                    if (newCol.name.toLowerCase() === userName.toLowerCase()) return; 
+
+                    let newQty = newCol.collection[cardKey] || 0;
+                    let oldCol = oldColleagues.find(c => c.name.toLowerCase() === newCol.name.toLowerCase());
+                    let oldQty = oldCol ? (oldCol.collection[cardKey] || 0) : 0;
+
+                    if (newQty > 1 && oldQty <= 1) {
+                        foundNewDupBy = newCol.name;
+                    }
+                });
+
+                if (foundNewDupBy) {
+                    // Si c'est pour l'utilisateur actuellement connecté
+                    if (userName.toLowerCase() === currentUser.name.toLowerCase()) {
+                        if (!triggeredCardKeysForMe.includes(cardKey)) {
+                            triggeredCardKeysForMe.push(cardKey);
+                            if (!db.requests) db.requests = [];
+                            
+                            // Eviter les doublons de notif identiques non résolues
+                            const notifExists = db.requests.some(r => r.to.toLowerCase() === userName.toLowerCase() && r.cardKey === cardKey && r.type === 'duplicate_alert' && !r.resolved);
+                            if (!notifExists) {
+                                db.requests.push({
+                                    id: 'req_alert_' + Date.now() + Math.random(),
+                                    type: 'duplicate_alert',
+                                    from: foundNewDupBy,
+                                    to: userName,
+                                    cardKey: cardKey,
+                                    resolved: false,
+                                    date: new Date().toLocaleDateString()
+                                });
+                            }
+                        }
+                    }
+                } else {
+                    newAlerts.push(alert);
+                }
+            });
+
+            db.alerts = newAlerts;
+            saveAndPushCloud();
         }
 
         function openProfileModal() {
@@ -1089,6 +1167,7 @@
             if (!currentUser) return;
 
             const banner = document.getElementById('notifications-banner');
+            const exchangeBadge = document.getElementById('exchange-badge-count');
             const profileBadge = document.getElementById('profile-badge-count');
 
             if (!db.requests) db.requests = [];
@@ -1096,10 +1175,13 @@
             const myRequests = db.requests.filter(r => r.to.toLowerCase() === currentUser.name.toLowerCase() && !r.resolved);
 
             if (myRequests.length > 0) {
+                exchangeBadge.innerText = myRequests.length;
+                exchangeBadge.classList.remove('hidden');
                 profileBadge.innerText = myRequests.length;
                 profileBadge.classList.remove('hidden');
                 banner.classList.remove('hidden');
             } else {
+                exchangeBadge.classList.add('hidden');
                 profileBadge.classList.add('hidden');
                 banner.classList.add('hidden');
             }
@@ -1128,7 +1210,21 @@
                 const card = db.cards[req.cardKey];
                 const cardName = card ? card.name : `Carte #${req.cardKey}`;
 
-                if (req.type === 'response_accepted') {
+                if (req.type === 'duplicate_alert') {
+                    html += `<div class="bg-amber-50 dark:bg-amber-950/30 p-3.5 rounded-2xl border border-amber-200 dark:border-amber-800 flex flex-col gap-3 text-xs">
+                        <div>
+                            🔔 Ton collègue <strong>${req.from}</strong> a le doublon de la carte <strong>${cardName}</strong> (${req.cardKey.startsWith('F') ? 'Fixeez' : '#' + req.cardKey}) !
+                        </div>
+                        <div class="flex items-center justify-end space-x-2">
+                            <button onclick="dismissAlert('${req.id}')" class="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 text-xs font-bold rounded-xl transition">
+                                Ignorer
+                            </button>
+                            <button onclick="goToDuplicateSearch('${req.cardKey}', '${req.id}')" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition shadow-sm">
+                                Voir le doublon 🔍
+                            </button>
+                        </div>
+                    </div>`;
+                } else if (req.type === 'response_accepted') {
                     html += `<div class="bg-emerald-50 dark:bg-emerald-950/30 p-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-800 flex flex-col gap-3 text-xs">
                         <div>
                             <strong>${req.from}</strong> a accepté ta demande pour la carte <strong>${cardName}</strong>, une fois que tu auras validé la carte sera rajoutée automatiquement à ton classeur.
@@ -1167,6 +1263,27 @@
                 }
             });
             listEl.innerHTML = html;
+        }
+
+        function dismissAlert(reqId) {
+            const req = db.requests.find(r => r.id === reqId);
+            if (req) {
+                req.resolved = true;
+                saveAndPushCloud();
+                updateNotificationsBanner();
+                updateModalRequestsList();
+            }
+        }
+
+        function goToDuplicateSearch(cardKey, reqId) {
+            dismissAlert(reqId);
+            closeModal('requests-modal');
+            switchTab('exchanges');
+            const searchInput = document.getElementById('exchange-search');
+            if (searchInput) {
+                searchInput.value = cardKey;
+                renderMatrixTable();
+            }
         }
 
         function resolveRequest(reqId, ownerName, cardKey, action) {
