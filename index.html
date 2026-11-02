@@ -247,7 +247,6 @@
                 </button>
                 <button onclick="switchTab('exchanges')" id="nav-exchanges" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white relative">
                     <i class="fa-solid fa-handshake mr-1.5"></i> Échanges & Doublons
-                    <!-- Badge retiré de l'onglet Echanges -->
                 </button>
                 <button onclick="switchTab('colleagues')" id="nav-colleagues" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white">
                     <i class="fa-solid fa-users mr-1.5"></i> Équipe
@@ -948,7 +947,7 @@
                 badge.innerText = `✨ Fixeez ${key}`;
             } else {
                 badge.className = "bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full";
-                badge.innerText = `Carte Normale #${key}`;
+                badge.innerText = `Normale #${key}`;
             }
 
             document.getElementById('missing-action-modal').classList.remove('hidden');
