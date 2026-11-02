@@ -247,7 +247,6 @@
                 </button>
                 <button onclick="switchTab('exchanges')" id="nav-exchanges" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white relative">
                     <i class="fa-solid fa-handshake mr-1.5"></i> Échanges & Doublons
-                    <!-- Badge retiré ici -->
                 </button>
                 <button onclick="switchTab('colleagues')" id="nav-colleagues" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white">
                     <i class="fa-solid fa-users mr-1.5"></i> Équipe
@@ -618,45 +617,45 @@
             "65": "Emile",
 			"66": "Linguini",
             "67": "Colette",
-			"68": "Gusteau",
+            "68": "Gusteau",
             "69": "Marie",
-			"70": "Thomas O' Malley",
+            "70": "Thomas O' Malley",
             "71": "Duchesse",
-			"72": "Marie et Berlioz",
+            "72": "Marie et Berlioz",
             "73": "Belle",
-			"74": "La Bête",
+            "74": "La Bête",
             "75": "Big Ben",
-			"76": "Lumière",
+            "76": "Lumière",
             "77": "Mme Samovar et Zip",
-			"78": "Raiponce",
+            "78": "Raiponce",
             "79": "Flynn Rider",
-			"80": "Maximus",
+            "80": "Maximus",
             "81": "Pascal",
-			"82": "Pongo",
+            "82": "Pongo",
             "83": "Perdita",
             "84": "Patch",
-			"85": "Rolly",
+            "85": "Rolly",
             "86": "Lucky",
             "87": "Peter Pan",
-			"88": "La Fée Clochette",
+            "88": "La Fée Clochette",
             "89": "Capitaine Crochet",
-			"90": "Monsieur Mouche",
+            "90": "Monsieur Mouche",
             "91": "Elsa",
-			"92": "Anna",
+            "92": "Anna",
             "93": "Kristoff",
-			"94": "Olaf",
+            "94": "Olaf",
             "95": "Bruni",
-			"96": "Elsa et Nokk",
+            "96": "Elsa et Nokk",
             "97": "Sven",
-			"98": "Anna et Elsa",
+            "98": "Anna et Elsa",
             "99": "Olaf",
-			"100": "Nick Wilde",
+            "100": "Nick Wilde",
             "101": "Judy Hopps",
-			"102": "Chef Bogo",
+            "102": "Chef Bogo",
             "103": "Gary De'Snake",
-			"104": "Nibbles Maplestick",
+            "104": "Nibbles Maplestick",
             "105": "Bob",
-			"106": "Sulli",
+            "106": "Sulli",
             "107": "Bouh",
             "108": "Germaine"
         };
@@ -782,7 +781,7 @@
                 document.getElementById('welcome-modal').classList.remove('hidden');
             }
 
-            // Lancement de la synchronisation automatique en arrière-plan toutes les 10 secondes
+            // Polling automatique en arrière-plan toutes les 10 secondes pour actualiser les données et alertes
             setInterval(() => {
                 if (db.currentUserName) {
                     syncWithCloud();
@@ -988,12 +987,12 @@
                     saveAndPushCloud();
                 }
 
-                // Ouvre la modale de confirmation demandée
+                // Affiche bien la modale de confirmation demandée
                 document.getElementById('alert-success-modal').classList.remove('hidden');
             }
         }
 
-        // Vérification automatique des alertes à chaque synchronisation
+        // Vérification automatique des alertes et génération de notification instantanée
         function checkAlertsOnSync(oldColleagues, newColleagues) {
             if (!db.alerts || db.alerts.length === 0) return;
 
