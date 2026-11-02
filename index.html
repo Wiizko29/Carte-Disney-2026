@@ -302,7 +302,7 @@
                 </div>
             </div>
 
-            <!-- RÉCAPITULATIF DES CARTES MANQUANTES -->
+            <!-- RÉCAPITULATIF DES CARTES MANQUANTES (RÉDUIT PAR DÉFAUT) -->
             <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
                 <div class="flex items-center justify-between cursor-pointer select-none" onclick="toggleMissingSummary()">
                     <div class="flex items-center space-x-2.5">
@@ -311,10 +311,11 @@
                         </div>
                         <h3 class="font-extrabold text-sm sm:text-base">Récapitulatif des cartes manquantes</h3>
                     </div>
-                    <span id="missing-summary-toggle-icon" class="text-slate-400 text-xs font-bold transition-transform"><i class="fa-solid fa-chevron-down"></i> Masquer / Afficher</span>
+                    <span id="missing-summary-toggle-icon" class="text-slate-400 text-xs font-bold transition-transform"><i class="fa-solid fa-chevron-down"></i> Afficher / Masquer</span>
                 </div>
 
-                <div id="missing-summary-content" class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <!-- Ajout de la classe "hidden" ici pour qu'il soit réduit par défaut -->
+                <div id="missing-summary-content" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
                     <!-- Fixeez Manquantes -->
                     <div class="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
                         <div class="flex items-center justify-between">
@@ -908,7 +909,6 @@
             content.classList.toggle('hidden');
         }
 
-        // --- GESTION DU CLIC SUR UNE CARTE MANQUANTE (2 CHOIX) ---
         function openMissingActionModal(key) {
             activeMissingKey = key;
             const card = db.cards[key];
@@ -940,6 +940,7 @@
                 switchTab('exchanges');
                 const searchInput = document.getElementById('exchange-search');
                 if (searchInput) {
+                    // On force la recherche stricte avec un préfixe ou format exact pour éviter les correspondances partielles
                     searchInput.value = activeMissingKey;
                     renderMatrixTable();
                 }
@@ -1495,6 +1496,7 @@
             }
         }
 
+        // --- RECHERCHE STRICTE DES DOUBLONS DANS L'ONGLET ÉCHANGES ---
         function renderMatrixTable() {
             const container = document.getElementById('exchanges-cards-container');
             const searchVal = document.getElementById('exchange-search').value.toLowerCase().trim();
@@ -1508,9 +1510,22 @@
                 const card = db.cards[key];
 
                 if (searchVal) {
-                    const matchKey = key.toLowerCase().includes(searchVal);
-                    const matchName = card.name.toLowerCase().includes(searchVal);
-                    if (!matchKey && !matchName) return;
+                    // Recherche stricte : soit la clé exacte (ex: "7"), soit le nom exact de la carte, soit la correspondance clé/nom classique
+                    const cleanKey = key.toLowerCase();
+                    const cleanName = card.name.toLowerCase();
+                    
+                    let matchStrict = (cleanKey === searchVal || cleanName === searchVal);
+                    let matchPartial = (cleanKey.includes(searchVal) || cleanName.includes(searchVal));
+
+                    // Si on tape un nombre exact (ex: "7"), on exige que la clé soit exactement égale à "7" 
+                    // pour éviter de remonter "17", "27", etc., sauf si l'utilisateur tape explicitement "17".
+                    if (/^\d+$/.test(searchVal)) {
+                        if (cleanKey !== searchVal && !cleanName.includes(searchVal)) return;
+                    } else if (searchVal.startsWith('f') && /^\d+$/.test(searchVal.substring(1))) {
+                        if (cleanKey !== searchVal) return;
+                    } else {
+                        if (!matchPartial) return;
+                    }
                 }
 
                 foundAny = true;
@@ -1533,7 +1548,7 @@
                         
                         <div class="space-y-2">`;
 
-                db.colleagues.forEach(c => {
+                db.colleagues.forceEach ? null : db.colleagues.forEach(c => {
                     let qty = c.collection[key] || 0;
                     if (qty > 1) {
                         let avatarHtml = '';
