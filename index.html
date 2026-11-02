@@ -65,7 +65,7 @@
         }
     </style>
 </head>
-<body class="h-full bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col transition-colors duration-300">
+<body class="h-full bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col transition-colors duration-300" onclick="closeMissingActionModal(event)">
 
     <!-- MODAL CONNEXION / INSCRIPTION -->
     <div id="welcome-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
@@ -184,6 +184,28 @@
             </div>
             <h3 id="zoom-card-title" class="text-base font-extrabold"></h3>
             <button onclick="closeModal('card-zoom-modal')" class="w-full py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-bold rounded-xl transition">Fermer</button>
+        </div>
+    </div>
+
+    <!-- MODAL CHOIX ACTION CLIC SUR CARTE MANQUANTE -->
+    <div id="missing-action-modal" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm hidden flex items-center justify-center p-4" onclick="closeMissingActionModal(event)">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-xs w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 text-center" onclick="event.stopPropagation()">
+            <div>
+                <span id="missing-action-card-badge" class="px-3 py-1 rounded-full text-xs font-bold mb-2 inline-block"></span>
+                <h3 id="missing-action-card-title" class="text-base font-extrabold">Carte #</h3>
+                <p class="text-[11px] text-slate-400 mt-1">Que souhaites-tu faire ?</p>
+            </div>
+            <div class="space-y-2 pt-2">
+                <button id="btn-action-add" onclick="executeMissingAction('add')" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-plus-circle"></i>
+                    <span>Ajouter (Modifier quantité)</span>
+                </button>
+                <button id="btn-action-search" onclick="executeMissingAction('search')" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <span>Rechercher les doublons</span>
+                </button>
+            </div>
+            <button onclick="closeModal('missing-action-modal')" class="w-full py-2 bg-slate-100 dark:bg-slate-800 text-xs font-bold rounded-xl transition">Annuler</button>
         </div>
     </div>
 
@@ -479,6 +501,7 @@
 
         let selectedColleagueIdForTab = null;
         let tempAvatarBase64 = null;
+        let activeMissingKey = null; // Stocke la clé de la carte sélectionnée dans le récap
 
         // --- DICTIONNAIRES DE PERSONNALISATION DES NOMS DE CARTES ---
         const customFixeezNames = {
@@ -885,6 +908,51 @@
             content.classList.toggle('hidden');
         }
 
+        // --- GESTION DU CLIC SUR UNE CARTE MANQUANTE (2 CHOIX) ---
+        function openMissingActionModal(key) {
+            activeMissingKey = key;
+            const card = db.cards[key];
+            if (!card) return;
+
+            document.getElementById('missing-action-card-title').innerText = `${key} : ${card.name}`;
+            
+            const badge = document.getElementById('missing-action-card-badge');
+            if (card.isPremium) {
+                badge.className = "card-premium-badge text-white text-xs font-bold px-3 py-1 rounded-full";
+                badge.innerText = `✨ Fixeez ${key}`;
+            } else {
+                badge.className = "bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full";
+                badge.innerText = `Normale #${key}`;
+            }
+
+            document.getElementById('missing-action-modal').classList.remove('hidden');
+        }
+
+        function closeMissingActionModal(event) {
+            // Si on clique en dehors de la modale ou sur l'arrière-plan
+            document.getElementById('missing-action-modal').classList.add('hidden');
+        }
+
+        function executeMissingAction(action) {
+            document.getElementById('missing-action-modal').classList.add('hidden');
+            if (!activeMissingKey) return;
+
+            const currentUser = getCurrentUser();
+
+            if (action === 'add') {
+                // Ouvre la modale de quantité standard pour son propre classeur
+                openQtyModal(currentUser.id, activeMissingKey);
+            } else if (action === 'search') {
+                // Bascule sur l'onglet des échanges, pré-remplit la recherche avec la clé/nom et actualise
+                switchTab('exchanges');
+                const searchInput = document.getElementById('exchange-search');
+                if (searchInput) {
+                    searchInput.value = activeMissingKey;
+                    renderMatrixTable();
+                }
+            }
+        }
+
         function openProfileModal() {
             const user = getCurrentUser();
             tempAvatarBase64 = user.avatar;
@@ -1211,7 +1279,7 @@
                 fixeezChipsContainer.innerHTML = `<span class="text-[11px] text-emerald-600 font-bold italic p-1">🎉 Toutes les Fixeez sont possédées !</span>`;
             } else {
                 fixeezChipsContainer.innerHTML = missingFixeez.map(k => `
-                    <button onclick="openQtyModal('${targetCol.id}', '${k}')" class="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-lg text-xs font-extrabold transition shadow-sm" title="${db.cards[k].name}">
+                    <button onclick="openMissingActionModal('${k}')" class="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-lg text-xs font-extrabold transition shadow-sm cursor-pointer" title="Cliquer pour agir">
                         ${k} : ${db.cards[k].name}
                     </button>
                 `).join('');
@@ -1221,7 +1289,7 @@
                 normalChipsContainer.innerHTML = `<span class="text-[11px] text-emerald-600 font-bold italic p-1">🎉 Toutes les cartes normales sont possédées !</span>`;
             } else {
                 normalChipsContainer.innerHTML = missingNormals.map(k => `
-                    <button onclick="openQtyModal('${targetCol.id}', '${k}')" class="px-2 py-1 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold transition shadow-sm" title="${db.cards[k].name}">
+                    <button onclick="openMissingActionModal('${k}')" class="px-2 py-1 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer" title="Cliquer pour agir">
                         #${k} : ${db.cards[k].name}
                     </button>
                 `).join('');
@@ -1256,7 +1324,6 @@
             if (countOwnedId) document.getElementById(countOwnedId).innerText = `${ownedCount} / 132`;
             if (countMissingId) document.getElementById(countMissingId).innerText = 132 - ownedCount;
 
-            // Met à jour le récapitulatif des manquantes pour son propre classeur
             if (targetCol.id === getCurrentUser().id) {
                 updateMissingSummary(targetCol);
             }
