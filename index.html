@@ -1256,16 +1256,35 @@
             const req = db.requests.find(r => r.id === reqId);
             if (req) {
                 req.resolved = true;
-                saveAndPushCloud();
+                
+                // 1. Fermer la modale et mettre à jour l'UI locale immédiatement
+                closeModal('requests-modal');
                 updateNotificationsBanner();
                 updateModalRequestsList();
-                closeModal('requests-modal');
-                switchTab('exchanges');
+
+                // 2. Basculer sur l'onglet échanges DIRECTEMENT (sans passer par switchTab pour éviter le sync prématuré)
+                ['mycollection', 'exchanges', 'colleagues'].forEach(t => {
+                    document.getElementById(`tab-${t}`).classList.add('hidden');
+                });
+                document.getElementById('tab-exchanges').classList.remove('hidden');
+
+                // Mettre à jour l'apparence des boutons du menu de navigation du haut
+                const btnDeskExchange = document.getElementById('nav-exchanges');
+                if (btnDeskExchange) {
+                    document.getElementById('nav-mycollection').className = "px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white";
+                    btnDeskExchange.className = "px-4 py-2 rounded-xl text-xs font-bold transition-all bg-emerald-600 text-white shadow-md shadow-emerald-600/20";
+                    document.getElementById('nav-colleagues').className = "px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-white";
+                }
+
+                // 3. Pré-remplir la recherche de la carte dans l'onglet échanges
                 const searchInput = document.getElementById('exchange-search');
                 if (searchInput && req.cardKey) {
                     searchInput.value = req.cardKey;
                     renderMatrixTable();
                 }
+
+                // 4. Envoyer la modification au cloud en arrière-plan tranquillement
+                saveAndPushCloud();
             }
         }
 
