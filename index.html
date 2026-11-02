@@ -187,7 +187,7 @@
         </div>
     </div>
 
-    <!-- MODAL CHOIX ACTION CLIC SUR CARTE MANQUANTE -->
+    <!-- MODAL CHOIX ACTION CLIC SUR CARTE MANQUANTE (3 CHOIX) -->
     <div id="missing-action-modal" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-xs w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 text-center">
             <div>
@@ -203,6 +203,10 @@
                 <button onclick="executeMissingAction('search')" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2">
                     <i class="fa-solid fa-magnifying-glass"></i>
                     <span>Rechercher les doublons</span>
+                </button>
+                <button onclick="executeMissingAction('notify')" class="w-full py-3 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-bell"></i>
+                    <span>M'avertir si doublon dispo</span>
                 </button>
             </div>
             <button onclick="closeModal('missing-action-modal')" class="w-full py-2 bg-slate-100 dark:bg-slate-800 text-xs font-bold rounded-xl transition">Annuler</button>
@@ -302,7 +306,7 @@
                 </div>
             </div>
 
-            <!-- RÉCAPITULATIF DES CARTES MANQUANTES (RÉDUIT PAR DÉFAUT) -->
+            <!-- RÉCAPITULATIF DES CARTES MANQUANTES -->
             <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
                 <div class="flex items-center justify-between cursor-pointer select-none" onclick="toggleMissingSummary()">
                     <div class="flex items-center space-x-2.5">
@@ -314,7 +318,6 @@
                     <span id="missing-summary-toggle-icon" class="text-slate-400 text-xs font-bold transition-transform"><i class="fa-solid fa-chevron-down"></i> Afficher / Masquer</span>
                 </div>
 
-                <!-- Ajout de la classe "hidden" ici pour qu'il soit réduit par défaut -->
                 <div id="missing-summary-content" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
                     <!-- Fixeez Manquantes -->
                     <div class="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
@@ -667,6 +670,8 @@
                 const remoteData = await response.json();
 
                 if (remoteData) {
+                    let oldColleagues = JSON.parse(JSON.stringify(db.colleagues));
+
                     if (remoteData.colleagues && remoteData.colleagues.length > 0) {
                         let mergedColleagues = [...db.colleagues];
                         remoteData.colleagues.forEach(remoteCol => {
@@ -683,6 +688,10 @@
                     if (remoteData.requests) {
                         db.requests = remoteData.requests;
                     }
+
+                    // Vérification automatique des alertes "m'avertir quand doublon dispo"
+                    checkAlertsOnSync(oldColleagues, db.colleagues);
+
                     refreshCurrentView();
                     updateNotificationsBanner();
                 }
@@ -940,11 +949,74 @@
                 switchTab('exchanges');
                 const searchInput = document.getElementById('exchange-search');
                 if (searchInput) {
-                    // On force la recherche stricte avec un préfixe ou format exact pour éviter les correspondances partielles
                     searchInput.value = activeMissingKey;
                     renderMatrixTable();
                 }
+            } else if (action === 'notify') {
+                // Enregistrement de l'alerte pour ce user et cette carte
+                if (!db.alerts) db.alerts = [];
+                
+                // Vérifier si l'alerte existe déjà
+                const alreadyExists = db.alerts.some(a => a.user.toLowerCase() === currentUser.name.toLowerCase() && a.cardKey === activeMissingKey);
+                if (!alreadyExists) {
+                    db.alerts.push({
+                        user: currentUser.name,
+                        cardKey: activeMissingKey
+                    });
+                    saveAndPushCloud();
+                }
+
+                showToast(`Compris, dès qu'un de tes collègues aura ce doublon tu seras notifié.`);
             }
+        }
+
+        // Vérifie si un doublon vient d'apparaître pour déclencher la notification
+        function checkAlertsOnSync(oldColleagues, newColleagues) {
+            if (!db.alerts || db.alerts.length === 0) return;
+
+            let newAlerts = [];
+            db.alerts.forEach(alert => {
+                const cardKey = alert.cardKey;
+                const userName = alert.user;
+
+                // Trouver si un collègue (autre que le user) vient d'avoir un doublon (> 1) pour cette carte
+                let foundNewDupBy = null;
+                newColleagues.forEach(newCol => {
+                    if (newCol.name.toLowerCase() === userName.toLowerCase()) return; // Ne pas s'auto-notifier si c'est lui-même
+
+                    let newQty = newCol.collection[cardKey] || 0;
+                    let oldCol = oldColleagues.find(c => c.name.toLowerCase() === newCol.name.toLowerCase());
+                    let oldQty = oldCol ? (oldCol.collection[cardKey] || 0) : 0;
+
+                    // Si la quantité est passée à > 1 alors qu'avant elle était <= 1
+                    if (newQty > 1 && oldQty <= 1) {
+                        foundNewDupBy = newCol.name;
+                    }
+                });
+
+                if (foundNewDupBy) {
+                    // Créer une notification d'alerte doublon pour le user
+                    if (!db.requests) db.requests = [];
+                    const card = db.cards[cardKey];
+                    const cardName = card ? card.name : `Carte #${cardKey}`;
+
+                    db.requests.push({
+                        id: 'req_alert_' + Date.now() + Math.random(),
+                        type: 'duplicate_alert',
+                        from: foundNewDupBy,
+                        to: userName,
+                        cardKey: cardKey,
+                        resolved: false,
+                        date: new Date().toLocaleDateString()
+                    });
+                } else {
+                    // Garder l'alerte active tant que le doublon n'a pas été trouvé chez quelqu'un
+                    newAlerts.push(alert);
+                }
+            });
+
+            db.alerts = newAlerts;
+            saveAndPushCloud();
         }
 
         function openProfileModal() {
@@ -974,6 +1046,7 @@
                 profileModalBadge.classList.add('hidden');
             }
 
+            document.getElementById('profile-modal').classList.add('hidden'); // Fix modal close bug
             document.getElementById('profile-modal').classList.remove('hidden');
         }
 
@@ -1105,7 +1178,7 @@
             const myRequests = db.requests.filter(r => r.to.toLowerCase() === currentUser.name.toLowerCase() && !r.resolved);
 
             if (myRequests.length === 0) {
-                listEl.innerHTML = `<p class="text-xs text-slate-400 italic text-center py-4">Aucune demande en attente.</p>`;
+                listEl.innerHTML = `<p class="text-xs text-slate-400 italic text-center py-4">Aucune notification en attente.</p>`;
                 return;
             }
 
@@ -1114,7 +1187,22 @@
                 const card = db.cards[req.cardKey];
                 const cardName = card ? card.name : `Carte #${req.cardKey}`;
 
-                if (req.type === 'response_accepted') {
+                if (req.type === 'duplicate_alert') {
+                    // Notification d'alerte doublon disponible avec bouton "Voir le doublon"
+                    html += `<div class="bg-amber-50 dark:bg-amber-950/30 p-3.5 rounded-2xl border border-amber-200 dark:border-amber-800 flex flex-col gap-3 text-xs">
+                        <div>
+                            🔔 Ton collègue <strong>${req.from}</strong> a le doublon de la carte <strong>${cardName}</strong> (${req.cardKey.startsWith('F') ? 'Fixeez' : '#' + req.cardKey}) !
+                        </div>
+                        <div class="flex items-center justify-end space-x-2">
+                            <button onclick="dismissAlert('${req.id}')" class="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 text-xs font-bold rounded-xl transition">
+                                Ignorer
+                            </button>
+                            <button onclick="goToDuplicateSearch('${req.cardKey}', '${req.id}')" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition shadow-sm">
+                                Voir le doublon 🔍
+                            </button>
+                        </div>
+                    </div>`;
+                } else if (req.type === 'response_accepted') {
                     html += `<div class="bg-emerald-50 dark:bg-emerald-950/30 p-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-800 flex flex-col gap-3 text-xs">
                         <div>
                             <strong>${req.from}</strong> a accepté ta demande pour la carte <strong>${cardName}</strong>, une fois que tu auras validé la carte sera rajoutée automatiquement à ton classeur.
@@ -1153,6 +1241,27 @@
                 }
             });
             listEl.innerHTML = html;
+        }
+
+        function dismissAlert(reqId) {
+            const req = db.requests.find(r => r.id === reqId);
+            if (req) {
+                req.resolved = true;
+                saveAndPushCloud();
+                updateNotificationsBanner();
+                updateModalRequestsList();
+            }
+        }
+
+        function goToDuplicateSearch(cardKey, reqId) {
+            dismissAlert(reqId);
+            closeModal('requests-modal');
+            switchTab('exchanges');
+            const searchInput = document.getElementById('exchange-search');
+            if (searchInput) {
+                searchInput.value = cardKey;
+                renderMatrixTable();
+            }
         }
 
         function resolveRequest(reqId, ownerName, cardKey, action) {
@@ -1496,7 +1605,6 @@
             }
         }
 
-        // --- RECHERCHE STRICTE DES DOUBLONS DANS L'ONGLET ÉCHANGES ---
         function renderMatrixTable() {
             const container = document.getElementById('exchanges-cards-container');
             const searchVal = document.getElementById('exchange-search').value.toLowerCase().trim();
@@ -1510,15 +1618,11 @@
                 const card = db.cards[key];
 
                 if (searchVal) {
-                    // Recherche stricte : soit la clé exacte (ex: "7"), soit le nom exact de la carte, soit la correspondance clé/nom classique
                     const cleanKey = key.toLowerCase();
                     const cleanName = card.name.toLowerCase();
                     
-                    let matchStrict = (cleanKey === searchVal || cleanName === searchVal);
                     let matchPartial = (cleanKey.includes(searchVal) || cleanName.includes(searchVal));
 
-                    // Si on tape un nombre exact (ex: "7"), on exige que la clé soit exactement égale à "7" 
-                    // pour éviter de remonter "17", "27", etc., sauf si l'utilisateur tape explicitement "17".
                     if (/^\d+$/.test(searchVal)) {
                         if (cleanKey !== searchVal && !cleanName.includes(searchVal)) return;
                     } else if (searchVal.startsWith('f') && /^\d+$/.test(searchVal.substring(1))) {
@@ -1548,7 +1652,7 @@
                         
                         <div class="space-y-2">`;
 
-                db.colleagues.forceEach ? null : db.colleagues.forEach(c => {
+                db.colleagues.forEach(c => {
                     let qty = c.collection[key] || 0;
                     if (qty > 1) {
                         let avatarHtml = '';
